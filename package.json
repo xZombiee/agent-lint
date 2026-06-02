@@ -18,8 +18,7 @@
   "scripts": {
     "clean": "node -e \"import('node:fs/promises').then(fs => fs.rm('dist', { recursive: true, force: true }))\"",
     "build": "tsc -p tsconfig.json",
-    "prepare": "npm run build",
-    "prepack": "npm run clean",
+    "prepack": "npm run clean && npm run build",
     "start": "node src/cli.ts",
     "scan": "node src/cli.ts",
     "test": "node --test tests/unit/*.test.ts tests/integration/*.test.ts",
