@@ -109,6 +109,24 @@ test("brokenFileReferences downgrades missing directories to warnings", () => {
   assert.equal(issues[0]?.severity, "warning");
 });
 
+test("brokenFileReferences treats external repo references as informational only", () => {
+  const issues = brokenFileReferences(createContext("Publish repo: `openclaw/docs`."));
+
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0]?.severity, "info");
+  assert.equal(issues[0]?.referenceKind, "external");
+});
+
+test("brokenFileReferences resolves glob patterns against repository files", () => {
+  const context = createContext("Source docs live in `docs/**`.");
+  context.repoFiles.push("docs/guide/getting-started.md");
+  context.repoDirectories.push("docs", "docs/guide");
+
+  const issues = brokenFileReferences(context);
+
+  assert.equal(issues.length, 0);
+});
+
 test("brokenFileReferences does not treat negated ignore rules as safe artifact paths", () => {
   const context = createContext(
     "Store temporary analysis artifacts only in a git-ignored path such as `.codex/`, `tmp/`, or another explicitly ignored reports directory.",

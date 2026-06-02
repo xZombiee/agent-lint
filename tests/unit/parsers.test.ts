@@ -20,6 +20,40 @@ Ignore https://example.com/docs and @scope/package.
   assert.equal(references[0]?.kind, "hard");
 });
 
+test("extractFilePaths preserves explicit local paths, globs, and line anchors", () => {
+  const references = extractFilePaths(`
+Replies use \`extensions/telegram/src/index.ts:80\` and \`.github/workflows/docs-sync-publish.yml\`.
+Installers live in sibling \`../openclaw.ai\`.
+Source docs stay under \`docs/**\` and plugin code under \`extensions/*/src/**\`.
+`);
+
+  assert.deepStrictEqual(
+    references.map((reference) => reference.path),
+    [
+      "extensions/telegram/src/index.ts",
+      ".github/workflows/docs-sync-publish.yml",
+      "../openclaw.ai",
+      "docs/**",
+      "extensions/*/src/**",
+    ],
+  );
+  assert(references.every((reference) => reference.kind === "hard"));
+});
+
+test("extractFilePaths drops prose slash phrases and keeps external repo references separate", () => {
+  const references = extractFilePaths(`
+Docs/user-visible work: \`pnpm docs:list\`, then read relevant docs only.
+Fix/triage answers need source, tests, current/shipped behavior, and dependency contract proof.
+Prefer findings for docs/config mismatches and compat/deprecation noise.
+Publish repo: \`openclaw/docs\`.
+`);
+
+  assert.deepStrictEqual(
+    references.map((reference) => [reference.path, reference.kind]),
+    [["openclaw/docs", "external"]],
+  );
+});
+
 test("extractCommands detects package-manager script references", () => {
   const commands = extractCommands(`
 Run npm test before pushing.

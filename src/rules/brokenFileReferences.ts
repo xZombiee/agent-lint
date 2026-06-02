@@ -3,6 +3,7 @@ import {
   isPathIgnoredByRules,
   isTrackedPath,
 } from "../utils/gitIgnore.ts";
+import { matchesPathPattern } from "../utils/pathPatterns.ts";
 import { findClosestPaths } from "../utils/pathSimilarity.ts";
 import type {
   AgentLintIssue,
@@ -51,7 +52,13 @@ function referenceExists(
         ? context.repoDirectories
         : [...context.repoFiles, ...context.repoDirectories];
 
-  return candidates.some((candidate) => collection.includes(candidate));
+  return candidates.some((candidate) => {
+    if (candidate.includes("*") || candidate.includes("?")) {
+      return collection.some((entry) => matchesPathPattern(entry, candidate));
+    }
+
+    return collection.includes(candidate);
+  });
 }
 
 function hasSafeIgnoredCandidate(
@@ -117,6 +124,8 @@ function buildInfoMessage(kind: ReferenceKind): string {
       return "Path policy";
     case "env":
       return "Environment path assumption";
+    case "external":
+      return "External repository reference";
     default:
       return "Broken file reference";
   }
@@ -130,6 +139,8 @@ function buildInfoRepoFact(kind: ReferenceKind): string {
       return "The policy expects a safe path, but no matching existing or ignored location was detected.";
     case "env":
       return "The referenced environment path is not currently visible in the repository.";
+    case "external":
+      return "The instruction points to another repository or external workspace, which cannot be validated against this repository.";
     default:
       return "The referenced path does not exist in the repository.";
   }
@@ -143,9 +154,21 @@ function buildInfoSuggestion(kind: ReferenceKind): string {
       return "Add or document one concrete allowed path, or make sure an ignored target directory is configured.";
     case "env":
       return "Document when this path is created or replace it with a concrete repository path.";
+    case "external":
+      return "Keep the external reference if intentional, or replace it with a local repository path when local repository proof is required.";
     default:
       return "Update the instruction to point to a concrete repository path.";
   }
+}
+
+function shouldEmitInfoIssue(reference: FileReference): boolean {
+  if (reference.kind !== "external") {
+    return true;
+  }
+
+  return /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|lives? in|owned|host)\b/iu.test(
+    reference.instructionText,
+  );
 }
 
 function buildSuggestion(referencePath: string, suggestions: string[]): string {
@@ -170,7 +193,15 @@ export function brokenFileReferences(context: ScanContext): AgentLintIssue[] {
       }
 
       if (firstReference.kind !== "hard") {
+        if (!shouldEmitInfoIssue(firstReference)) {
+          continue;
+        }
+
         const hasSatisfiedReference = references.some((reference) => {
+          if (reference.kind === "external") {
+            return false;
+          }
+
           const candidates = resolveReferenceCandidates(
             instructionFile.path,
             reference,

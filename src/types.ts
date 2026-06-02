@@ -1,5 +1,5 @@
 export type IssueSeverity = "info" | "warning" | "error";
-export type ReferenceKind = "hard" | "example" | "policy" | "env";
+export type ReferenceKind = "hard" | "example" | "policy" | "env" | "external";
 export type PathTargetKind = "file" | "dir" | "path";
 
 export type RuleName =

@@ -1,5 +1,6 @@
 import path from "node:path";
 import { isPathIgnoredByRules, isTrackedPath, } from "../utils/gitIgnore.js";
+import { matchesPathPattern } from "../utils/pathPatterns.js";
 import { findClosestPaths } from "../utils/pathSimilarity.js";
 function normalizeRepoPath(candidatePath) {
     const normalized = path.posix.normalize(candidatePath.replace(/\\/gu, "/"));
@@ -24,7 +25,12 @@ function referenceExists(candidates, reference, context) {
         : reference.target === "dir"
             ? context.repoDirectories
             : [...context.repoFiles, ...context.repoDirectories];
-    return candidates.some((candidate) => collection.includes(candidate));
+    return candidates.some((candidate) => {
+        if (candidate.includes("*") || candidate.includes("?")) {
+            return collection.some((entry) => matchesPathPattern(entry, candidate));
+        }
+        return collection.includes(candidate);
+    });
 }
 function hasSafeIgnoredCandidate(candidates, reference, context) {
     return candidates.some((candidate) => {
@@ -66,6 +72,8 @@ function buildInfoMessage(kind) {
             return "Path policy";
         case "env":
             return "Environment path assumption";
+        case "external":
+            return "External repository reference";
         default:
             return "Broken file reference";
     }
@@ -78,6 +86,8 @@ function buildInfoRepoFact(kind) {
             return "The policy expects a safe path, but no matching existing or ignored location was detected.";
         case "env":
             return "The referenced environment path is not currently visible in the repository.";
+        case "external":
+            return "The instruction points to another repository or external workspace, which cannot be validated against this repository.";
         default:
             return "The referenced path does not exist in the repository.";
     }
@@ -90,9 +100,17 @@ function buildInfoSuggestion(kind) {
             return "Add or document one concrete allowed path, or make sure an ignored target directory is configured.";
         case "env":
             return "Document when this path is created or replace it with a concrete repository path.";
+        case "external":
+            return "Keep the external reference if intentional, or replace it with a local repository path when local repository proof is required.";
         default:
             return "Update the instruction to point to a concrete repository path.";
     }
+}
+function shouldEmitInfoIssue(reference) {
+    if (reference.kind !== "external") {
+        return true;
+    }
+    return /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|lives? in|owned|host)\b/iu.test(reference.instructionText);
 }
 function buildSuggestion(referencePath, suggestions) {
     if (suggestions.length === 0) {
@@ -110,7 +128,13 @@ export function brokenFileReferences(context) {
                 continue;
             }
             if (firstReference.kind !== "hard") {
+                if (!shouldEmitInfoIssue(firstReference)) {
+                    continue;
+                }
                 const hasSatisfiedReference = references.some((reference) => {
+                    if (reference.kind === "external") {
+                        return false;
+                    }
                     const candidates = resolveReferenceCandidates(instructionFile.path, reference);
                     return (referenceExists(candidates, reference, context) ||
                         hasSafeIgnoredCandidate(candidates, reference, context) ||

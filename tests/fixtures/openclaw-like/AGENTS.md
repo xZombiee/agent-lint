@@ -1,0 +1,5 @@
+- Replies: repo-root refs only: `extensions/telegram/src/index.ts:80`. No absolute paths, no `~/`.
+- Docs/user-visible work: `pnpm docs:list`, then read relevant docs only.
+- Fix/triage answers need source, tests, current/shipped behavior, and dependency contract proof.
+- Prefer findings for docs/config mismatches and compat/deprecation noise.
+- Source docs: `docs/**`; publish repo: `openclaw/docs`; host: `https://docs.openclaw.ai`.

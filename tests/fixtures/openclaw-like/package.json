@@ -1,0 +1,7 @@
+{
+  "name": "openclaw-like",
+  "private": true,
+  "scripts": {
+    "docs:list": "node ./scripts/docs-list.js"
+  }
+}
