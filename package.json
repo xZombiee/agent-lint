@@ -1,11 +1,11 @@
 {
-  "name": "agent-doctor",
+  "name": "agent-lint",
   "version": "0.1.0",
-  "description": "CLI that finds stale, broken, and contradictory AI coding instructions in your repository.",
+  "description": "CLI that lints stale, broken, and contradictory AI coding instructions in your repository.",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "agent-doctor": "./dist/cli.js"
+    "agent-lint": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +16,10 @@
     "node": ">=20.10.0"
   },
   "scripts": {
+    "clean": "node -e \"import('node:fs/promises').then(fs => fs.rm('dist', { recursive: true, force: true }))\"",
     "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepack": "npm run clean",
     "start": "node src/cli.ts",
     "scan": "node src/cli.ts",
     "test": "node --test tests/unit/*.test.ts tests/integration/*.test.ts",

@@ -1,5 +1,5 @@
 import { findClosestMatches } from "../utils/pathSimilarity.ts";
-import type { AgentDoctorIssue, ScanContext } from "../types.ts";
+import type { AgentLintIssue, ScanContext } from "../types.ts";
 
 function buildCommandSuggestion(packageManager: string, suggestions: string[]): string {
   if (suggestions.length === 0) {
@@ -11,14 +11,14 @@ function buildCommandSuggestion(packageManager: string, suggestions: string[]): 
   return `Use ${commandPrefix} ${suggestedScript} or update the instruction.`;
 }
 
-export function missingPackageScripts(context: ScanContext): AgentDoctorIssue[] {
+export function missingPackageScripts(context: ScanContext): AgentLintIssue[] {
   const packageScripts = Object.keys(context.packageJson?.scripts ?? {});
 
   if (context.packageJson === null) {
     return [];
   }
 
-  const issues: AgentDoctorIssue[] = [];
+  const issues: AgentLintIssue[] = [];
 
   for (const instructionFile of context.instructionFiles) {
     for (const command of instructionFile.commands) {

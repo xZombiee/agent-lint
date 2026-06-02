@@ -1,10 +1,10 @@
-# agent-doctor
+# agent-lint
 
-CLI that finds stale, broken, and contradictory AI coding instructions in your repository.
+CLI that lints stale, broken, and contradictory AI coding instructions in your repository.
 
 ## What It Does
 
-Agent Doctor validates repository instruction files against repository facts before a coding agent relies on them.
+Agent Lint validates repository instruction files against repository facts before a coding agent relies on them.
 
 V0.1 focuses on factual checks only:
 
@@ -17,7 +17,7 @@ V0.1 does not edit repository files. It reports issues and suggestions only.
 
 ## Scope
 
-Agent Doctor is optimized for Node and TypeScript repositories.
+Agent Lint is optimized for Node and TypeScript repositories.
 
 It can scan any repository, but package and tool checks only have strong guarantees when `package.json` is present.
 
@@ -26,13 +26,13 @@ It can scan any repository, but package and tool checks only have strong guarant
 Run it directly with `npx`:
 
 ```bash
-npx agent-doctor
+npx agent-lint
 ```
 
 Or install it as a dev dependency:
 
 ```bash
-npm install -D agent-doctor
+npm install -D agent-lint
 ```
 
 ## Usage
@@ -40,19 +40,19 @@ npm install -D agent-doctor
 Default local scan:
 
 ```bash
-agent-doctor
+agent-lint
 ```
 
 Available modes:
 
 ```bash
-agent-doctor
-agent-doctor --json
-agent-doctor --codex
-agent-doctor --write-summary
-agent-doctor --ci
-agent-doctor --config agent-doctor.config.json
-agent-doctor --project ../some-other-repo
+agent-lint
+agent-lint --json
+agent-lint --codex
+agent-lint --write-summary
+agent-lint --ci
+agent-lint --config agent-lint.config.json
+agent-lint --project ../some-other-repo
 ```
 
 ## Output Modes
@@ -73,7 +73,7 @@ Set `NO_COLOR=1` to disable ANSI colors.
 Example:
 
 ```txt
-Agent Doctor
+Agent Lint
 
 Scanned 3 instruction files.
 Found 4 issues: 1 error, 3 warning, 0 info.
@@ -93,7 +93,7 @@ Schema:
 ```ts
 type IssueSeverity = "info" | "warning" | "error";
 
-type AgentDoctorIssue = {
+type AgentLintIssue = {
   id: string;
   rule:
     | "brokenFileReferences"
@@ -113,7 +113,7 @@ type AgentDoctorIssue = {
   suggestions?: string[];
 };
 
-type AgentDoctorReport = {
+type AgentLintReport = {
   projectRoot: string;
   scannedFiles: string[];
   summary: {
@@ -122,7 +122,7 @@ type AgentDoctorReport = {
     warningCount: number;
     errorCount: number;
   };
-  issues: AgentDoctorIssue[];
+  issues: AgentLintIssue[];
 };
 ```
 
@@ -134,21 +134,21 @@ The summary tells the agent to:
 
 - Prefer repository facts over stale instructions
 - Update contradicted instruction files before relying on them
-- Rerun Agent Doctor after remediation
+- Rerun Agent Lint after remediation
 
 ## Artifact Writing
 
-`--write-summary` writes artifacts to `.agent-doctor/` by default:
+`--write-summary` writes artifacts to `.agent-lint/` by default:
 
-- `.agent-doctor/report.json`
-- `.agent-doctor/summary.md`
+- `.agent-lint/report.json`
+- `.agent-lint/summary.md`
 
 Standard scans do not write files.
 
 If you want the artifacts ignored by Git, add:
 
 ```gitignore
-.agent-doctor/
+.agent-lint/
 ```
 
 ## CI
@@ -156,7 +156,7 @@ If you want the artifacts ignored by Git, add:
 Recommended CI command:
 
 ```bash
-agent-doctor --ci
+agent-lint --ci
 ```
 
 CI semantics in V0.1:
@@ -185,10 +185,10 @@ Nested instruction files are scanned, so a repository can keep local `AGENTS.md`
 
 ## Configuration
 
-Agent Doctor supports a single JSON config file:
+Agent Lint supports a single JSON config file:
 
 ```txt
-agent-doctor.config.json
+agent-lint.config.json
 ```
 
 Supported fields:
@@ -210,7 +210,7 @@ Supported fields:
     "**/.github/copilot-instructions.md"
   ],
   "ignorePaths": ["node_modules", "dist", "build", ".next", ".git"],
-  "artifactDir": ".agent-doctor",
+  "artifactDir": ".agent-lint",
   "rules": {
     "brokenFileReferences": true,
     "missingPackageScripts": true,
@@ -291,19 +291,19 @@ Default severity: `warning`
 
 Human-led loop:
 
-1. Run Agent Doctor.
+1. Run Agent Lint.
 2. Review each finding.
 3. Decide whether the instruction is stale or the repository drifted.
 4. Update instructions or code accordingly.
-5. Rerun Agent Doctor.
+5. Rerun Agent Lint.
 
 Agent-assisted loop:
 
-1. Run `agent-doctor --codex`.
+1. Run `agent-lint --codex`.
 2. Provide the summary to your coding agent together with the target instruction files.
 3. Ask the agent to fix stale instructions first and explain anything it cannot safely resolve.
 4. Review the edits.
-5. Rerun Agent Doctor.
+5. Rerun Agent Lint.
 
 ## Development
 

@@ -8,7 +8,7 @@ import { findInstructionFiles } from "./findInstructionFiles.ts";
 import { listRepoFiles } from "./listRepoFiles.ts";
 import { listTrackedPaths, readGitIgnoreRules } from "./readGitIgnoreRules.ts";
 import { readPackageJson } from "./readPackageJson.ts";
-import type { ParsedInstructionFile, ResolvedAgentDoctorConfig, ScanContext } from "../types.ts";
+import type { ParsedInstructionFile, ResolvedAgentLintConfig, ScanContext } from "../types.ts";
 
 function collectRepoDirectories(repoFiles: string[]): string[] {
   const directories = new Set<string>();
@@ -47,7 +47,7 @@ async function readInstructionFiles(
 
 export async function buildScanContext(
   projectRoot: string,
-  config: ResolvedAgentDoctorConfig,
+  config: ResolvedAgentLintConfig,
 ): Promise<ScanContext> {
   const repoFiles = await listRepoFiles(projectRoot, config.ignorePaths);
   const repoDirectories = collectRepoDirectories(repoFiles);

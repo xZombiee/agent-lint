@@ -1,6 +1,6 @@
-import type { ResolvedAgentDoctorConfig } from "../types.ts";
+import type { ResolvedAgentLintConfig } from "../types.ts";
 
-export const defaultConfig: ResolvedAgentDoctorConfig = {
+export const defaultConfig: ResolvedAgentLintConfig = {
   instructionFiles: [
     "AGENTS.md",
     "**/AGENTS.md",
@@ -16,7 +16,7 @@ export const defaultConfig: ResolvedAgentDoctorConfig = {
     "**/.github/copilot-instructions.md",
   ],
   ignorePaths: ["node_modules", "dist", "build", ".next", ".git"],
-  artifactDir: ".agent-doctor",
+  artifactDir: ".agent-lint",
   rules: {
     brokenFileReferences: true,
     missingPackageScripts: true,

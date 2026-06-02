@@ -5,7 +5,7 @@ import {
 } from "../utils/gitIgnore.ts";
 import { findClosestPaths } from "../utils/pathSimilarity.ts";
 import type {
-  AgentDoctorIssue,
+  AgentLintIssue,
   FileReference,
   ReferenceKind,
   ScanContext,
@@ -156,8 +156,8 @@ function buildSuggestion(referencePath: string, suggestions: string[]): string {
   return `Use ${suggestions[0]} or update the instruction.`;
 }
 
-export function brokenFileReferences(context: ScanContext): AgentDoctorIssue[] {
-  const issues: AgentDoctorIssue[] = [];
+export function brokenFileReferences(context: ScanContext): AgentLintIssue[] {
+  const issues: AgentLintIssue[] = [];
 
   for (const instructionFile of context.instructionFiles) {
     const groups = groupReferencesByLine(instructionFile.fileReferences);

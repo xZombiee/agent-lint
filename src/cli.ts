@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
-import { runAgentDoctor } from "./index.ts";
+import { runAgentLint } from "./index.ts";
 import type { OutputMode, RunOptions } from "./types.ts";
 
-const HELP_TEXT = `Agent Doctor
+const HELP_TEXT = `Agent Lint
 
 Usage:
-  agent-doctor [options]
+  agent-lint [options]
 
 Options:
   --json                 Print the JSON report to stdout
   --codex                Print the Codex handoff summary to stdout
   --ci                   Exit with code 1 when issues are found
-  --write-summary        Write .agent-doctor/report.json and .agent-doctor/summary.md
+  --write-summary        Write .agent-lint/report.json and .agent-lint/summary.md
   --config <path>        Load configuration from a custom JSON file
   --project <path>       Scan a specific project directory
   -h, --help             Show this help text
@@ -83,7 +83,7 @@ function parseArguments(argv: string[]): RunOptions {
 async function main(): Promise<void> {
   try {
     const options = parseArguments(process.argv.slice(2));
-    const result = await runAgentDoctor(options);
+    const result = await runAgentLint(options);
     const outputMode: OutputMode = options.outputMode ?? "terminal";
 
     process.stdout.write(`${result.outputs[outputMode]}\n`);

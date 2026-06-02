@@ -13,7 +13,7 @@ export type OutputMode = "terminal" | "json" | "codex";
 export type RuleToggleMap = Record<RuleName, boolean>;
 export type RuleSeverityMap = Record<RuleName, IssueSeverity>;
 
-export interface AgentDoctorConfig {
+export interface AgentLintConfig {
   instructionFiles?: string[];
   ignorePaths?: string[];
   artifactDir?: string;
@@ -21,7 +21,7 @@ export interface AgentDoctorConfig {
   severity?: Partial<RuleSeverityMap>;
 }
 
-export interface ResolvedAgentDoctorConfig {
+export interface ResolvedAgentLintConfig {
   instructionFiles: string[];
   ignorePaths: string[];
   artifactDir: string;
@@ -29,7 +29,7 @@ export interface ResolvedAgentDoctorConfig {
   severity: RuleSeverityMap;
 }
 
-export interface AgentDoctorIssue {
+export interface AgentLintIssue {
   id: string;
   rule: RuleName;
   severity: IssueSeverity;
@@ -45,7 +45,7 @@ export interface AgentDoctorIssue {
   suggestions?: string[];
 }
 
-export interface AgentDoctorReport {
+export interface AgentLintReport {
   projectRoot: string;
   scannedFiles: string[];
   summary: {
@@ -54,7 +54,7 @@ export interface AgentDoctorReport {
     warningCount: number;
     errorCount: number;
   };
-  issues: AgentDoctorIssue[];
+  issues: AgentLintIssue[];
 }
 
 export interface PackageJsonData {
@@ -165,7 +165,7 @@ export interface ParsedInstructionFile {
 
 export interface ScanContext {
   projectRoot: string;
-  config: ResolvedAgentDoctorConfig;
+  config: ResolvedAgentLintConfig;
   repoFiles: string[];
   repoDirectories: string[];
   gitIgnoreRules: GitIgnoreRule[];
@@ -183,7 +183,7 @@ export interface RunOptions {
 }
 
 export interface RunResult {
-  report: AgentDoctorReport;
+  report: AgentLintReport;
   outputs: Record<OutputMode, string>;
   artifactPaths?: {
     reportPath: string;

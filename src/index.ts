@@ -11,8 +11,8 @@ import { explicitContradictions } from "./rules/explicitContradictions.ts";
 import { missingPackageScripts } from "./rules/missingPackageScripts.ts";
 import { toolMismatch } from "./rules/toolMismatch.ts";
 import type {
-  AgentDoctorIssue,
-  AgentDoctorReport,
+  AgentLintIssue,
+  AgentLintReport,
   IssueSeverity,
   RuleName,
   RunOptions,
@@ -20,7 +20,7 @@ import type {
   ScanContext,
 } from "./types.ts";
 
-type RuleImplementation = (context: ScanContext) => AgentDoctorIssue[];
+type RuleImplementation = (context: ScanContext) => AgentLintIssue[];
 
 const RULE_IMPLEMENTATIONS: Record<RuleName, RuleImplementation> = {
   brokenFileReferences,
@@ -35,7 +35,7 @@ const SEVERITY_ORDER: Record<IssueSeverity, number> = {
   info: 2,
 };
 
-function sortIssues(issues: AgentDoctorIssue[]): AgentDoctorIssue[] {
+function sortIssues(issues: AgentLintIssue[]): AgentLintIssue[] {
   return [...issues].sort((left, right) => {
     return (
       SEVERITY_ORDER[left.severity] - SEVERITY_ORDER[right.severity] ||
@@ -47,10 +47,10 @@ function sortIssues(issues: AgentDoctorIssue[]): AgentDoctorIssue[] {
 }
 
 function applySeverityOverride(
-  issues: AgentDoctorIssue[],
+  issues: AgentLintIssue[],
   ruleName: RuleName,
   severity: IssueSeverity,
-): AgentDoctorIssue[] {
+): AgentLintIssue[] {
   return issues.map((issue) => ({
     ...issue,
     severity:
@@ -58,7 +58,7 @@ function applySeverityOverride(
   }));
 }
 
-function buildReport(projectRoot: string, scannedFiles: string[], issues: AgentDoctorIssue[]): AgentDoctorReport {
+function buildReport(projectRoot: string, scannedFiles: string[], issues: AgentLintIssue[]): AgentLintReport {
   return {
     projectRoot,
     scannedFiles,
@@ -72,7 +72,7 @@ function buildReport(projectRoot: string, scannedFiles: string[], issues: AgentD
   };
 }
 
-export async function runAgentDoctor(options: RunOptions = {}): Promise<RunResult> {
+export async function runAgentLint(options: RunOptions = {}): Promise<RunResult> {
   const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
   const config = await loadConfig(projectRoot, options.configPath);
   const context = await buildScanContext(projectRoot, config);
@@ -121,9 +121,9 @@ export async function runAgentDoctor(options: RunOptions = {}): Promise<RunResul
 }
 
 export type {
-  AgentDoctorConfig,
-  AgentDoctorIssue,
-  AgentDoctorReport,
+  AgentLintConfig,
+  AgentLintIssue,
+  AgentLintReport,
   OutputMode,
   RunOptions,
   RunResult,

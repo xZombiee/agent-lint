@@ -1,32 +1,40 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import { appendFile, cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import {
+  appendFile,
+  chmod,
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import test from "node:test";
-import { runAgentDoctor } from "../../src/index.ts";
+import { runAgentLint } from "../../src/index.ts";
 import { pathExists } from "../../src/utils/pathExists.ts";
 
 const FIXTURES_ROOT = path.resolve("tests/fixtures");
 
 async function copyFixture(name: string): Promise<string> {
-  const targetRoot = await mkdtemp(path.join(tmpdir(), `agent-doctor-${name}-`));
+  const targetRoot = await mkdtemp(path.join(tmpdir(), `agent-lint-${name}-`));
   const sourcePath = path.join(FIXTURES_ROOT, name);
   const targetPath = path.join(targetRoot, name);
   await cp(sourcePath, targetPath, { recursive: true });
   return targetPath;
 }
 
-test("runAgentDoctor returns zero issues for a valid fixture", async () => {
+test("runAgentLint returns zero issues for a valid fixture", async () => {
   const projectRoot = await copyFixture("valid-repo");
-  const result = await runAgentDoctor({ projectRoot });
+  const result = await runAgentLint({ projectRoot });
 
   assert.equal(result.report.summary.issueCount, 0);
   assert.equal(result.exitCode, 0);
 });
 
-test("runAgentDoctor reports stale instructions and CI failure for the stale fixture", async () => {
+test("runAgentLint reports stale instructions and CI failure for the stale fixture", async () => {
   const projectRoot = await copyFixture("stale-repo");
-  const result = await runAgentDoctor({ projectRoot, ci: true });
+  const result = await runAgentLint({ projectRoot, ci: true });
 
   assert.equal(result.report.summary.errorCount, 1);
   assert.equal(result.report.summary.warningCount, 5);
@@ -46,7 +54,7 @@ test("git-ignored example paths in instructions do not produce broken-path noise
     writeFile(gitignorePath, "reports/\n", "utf8"),
   ]);
 
-  const result = await runAgentDoctor({ projectRoot });
+  const result = await runAgentLint({ projectRoot });
 
   assert.equal(result.report.summary.issueCount, 0);
 });
@@ -64,15 +72,31 @@ test("nested AGENTS files are discovered and can resolve local relative paths", 
     writeFile(path.join(nestedDirectory, "docs", "runbook.md"), "# Runbook\n", "utf8"),
   ]);
 
-  const result = await runAgentDoctor({ projectRoot });
+  const result = await runAgentLint({ projectRoot });
 
   assert(result.report.scannedFiles.includes("security/checkout/AGENTS.md"));
   assert.equal(result.report.summary.issueCount, 0);
 });
 
+test("unreadable directories do not crash the scan", async () => {
+  const projectRoot = await copyFixture("valid-repo");
+  const blockedDirectory = path.join(projectRoot, "blocked");
+
+  await mkdir(blockedDirectory, { recursive: true });
+  await writeFile(path.join(blockedDirectory, "secret.txt"), "secret\n", "utf8");
+  await chmod(blockedDirectory, 0o000);
+
+  try {
+    const result = await runAgentLint({ projectRoot });
+    assert.equal(result.report.summary.issueCount, 0);
+  } finally {
+    await chmod(blockedDirectory, 0o755);
+  }
+});
+
 test("json and codex outputs contain the documented structures", async () => {
   const projectRoot = await copyFixture("stale-repo");
-  const result = await runAgentDoctor({ projectRoot });
+  const result = await runAgentLint({ projectRoot });
   const jsonReport = JSON.parse(result.outputs.json) as {
     summary: { issueCount: number };
     issues: Array<{ rule: string }>;
@@ -89,7 +113,7 @@ test("json and codex outputs contain the documented structures", async () => {
 
 test("writeSummary creates report and summary artifacts", async () => {
   const projectRoot = await copyFixture("stale-repo");
-  const result = await runAgentDoctor({ projectRoot, writeSummary: true });
+  const result = await runAgentLint({ projectRoot, writeSummary: true });
 
   assert(result.artifactPaths);
   assert(await pathExists(result.artifactPaths!.reportPath));
@@ -101,5 +125,5 @@ test("writeSummary creates report and summary artifacts", async () => {
   const summaryMarkdown = await readFile(result.artifactPaths!.summaryPath, "utf8");
 
   assert.equal(reportJson.summary.issueCount, 6);
-  assert.match(summaryMarkdown, /# Agent Doctor Summary/u);
+  assert.match(summaryMarkdown, /# Agent Lint Summary/u);
 });

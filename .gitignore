@@ -1,4 +1,6 @@
 node_modules
 dist
+.agent-lint/
 .agent-doctor/
 .DS_Store
+*.tgz

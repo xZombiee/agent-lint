@@ -1,12 +1,12 @@
 import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { formatJsonReport } from "./jsonReporter.ts";
-import type { AgentDoctorReport } from "../types.ts";
+import type { AgentLintReport } from "../types.ts";
 
 export async function writeArtifacts(
   projectRoot: string,
   artifactDir: string,
-  report: AgentDoctorReport,
+  report: AgentLintReport,
   codexSummary: string,
 ): Promise<{ reportPath: string; summaryPath: string }> {
   const resolvedArtifactDirectory = path.resolve(projectRoot, artifactDir);

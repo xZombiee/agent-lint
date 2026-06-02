@@ -1,10 +1,10 @@
-import type { AgentDoctorIssue, AgentDoctorReport, IssueSeverity } from "../types.ts";
+import type { AgentLintIssue, AgentLintReport, IssueSeverity } from "../types.ts";
 
-function formatLocation(issue: AgentDoctorIssue): string {
+function formatLocation(issue: AgentLintIssue): string {
   return issue.line ? `${issue.sourceFile}:${issue.line}` : issue.sourceFile;
 }
 
-function formatIssue(issue: AgentDoctorIssue): string {
+function formatIssue(issue: AgentLintIssue): string {
   const parts = [
     `- \`${formatLocation(issue)}\` ${issue.message}: ${issue.evidence.repoFact}`,
   ];
@@ -17,15 +17,15 @@ function formatIssue(issue: AgentDoctorIssue): string {
 }
 
 function collectIssuesBySeverity(
-  report: AgentDoctorReport,
+  report: AgentLintReport,
   severity: IssueSeverity,
-): AgentDoctorIssue[] {
+): AgentLintIssue[] {
   return report.issues.filter((issue) => issue.severity === severity);
 }
 
-export function formatCodexReport(report: AgentDoctorReport): string {
+export function formatCodexReport(report: AgentLintReport): string {
   const sections: string[] = [
-    "# Agent Doctor Summary",
+    "# Agent Lint Summary",
     "",
     "Repository facts currently contradict parts of the instruction set. Prefer repository facts over stale instruction text until the findings below are resolved.",
     "",
@@ -60,11 +60,11 @@ export function formatCodexReport(report: AgentDoctorReport): string {
     "",
     "## Task",
     "",
-    "Update the affected instruction files or the repository so the referenced paths, commands, and tools match. Verify the impacted files, scripts, and dependencies, then rerun `agent-doctor`.",
+    "Update the affected instruction files or the repository so the referenced paths, commands, and tools match. Verify the impacted files, scripts, and dependencies, then rerun `agent-lint`.",
     "",
     "## After changes",
     "",
-    "Rerun `agent-doctor` or `agent-doctor --ci` and confirm that the issue count drops.",
+    "Rerun `agent-lint` or `agent-lint --ci` and confirm that the issue count drops.",
   );
 
   return sections.join("\n");

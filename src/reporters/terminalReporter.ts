@@ -5,7 +5,7 @@ import {
   resolveColorUsage,
   yellow,
 } from "../utils/terminalColors.ts";
-import type { AgentDoctorIssue, AgentDoctorReport, RuleName } from "../types.ts";
+import type { AgentLintIssue, AgentLintReport, RuleName } from "../types.ts";
 
 const RULE_TITLES: Record<RuleName, string> = {
   brokenFileReferences: "Broken file reference",
@@ -18,11 +18,11 @@ function formatCount(label: string, value: number): string {
   return `${value} ${label}${value === 1 ? "" : "s"}`;
 }
 
-function formatLocation(issue: AgentDoctorIssue): string {
+function formatLocation(issue: AgentLintIssue): string {
   return issue.line ? `${issue.sourceFile}:${issue.line}` : issue.sourceFile;
 }
 
-function colorSeverity(value: string, severity: AgentDoctorIssue["severity"], useColor: boolean): string {
+function colorSeverity(value: string, severity: AgentLintIssue["severity"], useColor: boolean): string {
   if (severity === "error") {
     return red(value, { useColor });
   }
@@ -47,12 +47,12 @@ function colorSummaryCount(label: string, count: number, useColor: boolean): str
 }
 
 export function formatTerminalReport(
-  report: AgentDoctorReport,
+  report: AgentLintReport,
   options?: { useColor?: boolean },
 ): string {
   const useColor = resolveColorUsage(options);
   const lines: string[] = [
-    "Agent Doctor",
+    "Agent Lint",
     "",
     `Scanned ${formatCount("instruction file", report.scannedFiles.length)}.`,
     `Found ${formatCount("issue", report.summary.issueCount)}: ${colorSummaryCount("error", report.summary.errorCount, useColor)}, ${colorSummaryCount("warning", report.summary.warningCount, useColor)}, ${colorSummaryCount("info", report.summary.infoCount, useColor)}.`,
@@ -81,7 +81,7 @@ export function formatTerminalReport(
   lines.push(
     "",
     "Next step:",
-    "Run agent-doctor --codex to generate an agent-ready remediation summary.",
+    "Run agent-lint --codex to generate an agent-ready remediation summary.",
   );
 
   return lines.join("\n");

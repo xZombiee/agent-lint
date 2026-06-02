@@ -4,7 +4,7 @@ import {
   getInstalledToolKeys,
   getToolDefinition,
 } from "../utils/supportedTools.ts";
-import type { AgentDoctorIssue, ScanContext } from "../types.ts";
+import type { AgentLintIssue, ScanContext } from "../types.ts";
 
 function joinValues(values: string[]): string {
   if (values.length <= 1) {
@@ -18,8 +18,8 @@ function joinValues(values: string[]): string {
   return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
 }
 
-export function explicitContradictions(context: ScanContext): AgentDoctorIssue[] {
-  const issues: AgentDoctorIssue[] = [];
+export function explicitContradictions(context: ScanContext): AgentLintIssue[] {
+  const issues: AgentLintIssue[] = [];
   const installedTools = getInstalledToolKeys(context.packageJson);
   const packageScripts = new Set(Object.keys(context.packageJson?.scripts ?? {}));
 

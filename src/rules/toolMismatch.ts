@@ -1,5 +1,5 @@
 import { getAlternativeTools, getInstalledToolKeys, getToolDefinition } from "../utils/supportedTools.ts";
-import type { AgentDoctorIssue, ScanContext } from "../types.ts";
+import type { AgentLintIssue, ScanContext } from "../types.ts";
 
 function joinToolNames(toolNames: string[]): string {
   if (toolNames.length <= 1) {
@@ -13,9 +13,9 @@ function joinToolNames(toolNames: string[]): string {
   return `${toolNames.slice(0, -1).join(", ")}, and ${toolNames.at(-1)}`;
 }
 
-export function toolMismatch(context: ScanContext): AgentDoctorIssue[] {
+export function toolMismatch(context: ScanContext): AgentLintIssue[] {
   const installedTools = getInstalledToolKeys(context.packageJson);
-  const issues: AgentDoctorIssue[] = [];
+  const issues: AgentLintIssue[] = [];
 
   for (const instructionFile of context.instructionFiles) {
     for (const mention of instructionFile.toolMentions) {

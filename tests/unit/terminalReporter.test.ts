@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { formatTerminalReport } from "../../src/reporters/terminalReporter.ts";
-import type { AgentDoctorReport } from "../../src/types.ts";
+import type { AgentLintReport } from "../../src/types.ts";
 
-const baseReport: AgentDoctorReport = {
+const baseReport: AgentLintReport = {
   projectRoot: "/repo",
   scannedFiles: ["AGENTS.md"],
   summary: {

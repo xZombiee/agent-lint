@@ -2,9 +2,9 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { parseConfigObject, resolveConfig } from "./configSchema.ts";
 import { pathExists } from "../utils/pathExists.ts";
-import type { ResolvedAgentDoctorConfig } from "../types.ts";
+import type { ResolvedAgentLintConfig } from "../types.ts";
 
-const DEFAULT_CONFIG_NAME = "agent-doctor.config.json";
+const DEFAULT_CONFIG_NAME = "agent-lint.config.json";
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values)];
@@ -13,7 +13,7 @@ function uniqueStrings(values: string[]): string[] {
 export async function loadConfig(
   projectRoot: string,
   explicitConfigPath?: string,
-): Promise<ResolvedAgentDoctorConfig> {
+): Promise<ResolvedAgentLintConfig> {
   const resolvedConfigPath = explicitConfigPath
     ? path.resolve(projectRoot, explicitConfigPath)
     : path.join(projectRoot, DEFAULT_CONFIG_NAME);
