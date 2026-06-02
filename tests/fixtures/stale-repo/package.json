@@ -1,0 +1,14 @@
+{
+  "name": "stale-repo-fixture",
+  "private": true,
+  "scripts": {
+    "test:unit": "node --test",
+    "build": "node -e \"console.log('build')\""
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0"
+  }
+}

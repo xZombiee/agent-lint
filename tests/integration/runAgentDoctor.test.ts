@@ -1,0 +1,105 @@
+import assert from "node:assert/strict";
+import path from "node:path";
+import { appendFile, cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import test from "node:test";
+import { runAgentDoctor } from "../../src/index.ts";
+import { pathExists } from "../../src/utils/pathExists.ts";
+
+const FIXTURES_ROOT = path.resolve("tests/fixtures");
+
+async function copyFixture(name: string): Promise<string> {
+  const targetRoot = await mkdtemp(path.join(tmpdir(), `agent-doctor-${name}-`));
+  const sourcePath = path.join(FIXTURES_ROOT, name);
+  const targetPath = path.join(targetRoot, name);
+  await cp(sourcePath, targetPath, { recursive: true });
+  return targetPath;
+}
+
+test("runAgentDoctor returns zero issues for a valid fixture", async () => {
+  const projectRoot = await copyFixture("valid-repo");
+  const result = await runAgentDoctor({ projectRoot });
+
+  assert.equal(result.report.summary.issueCount, 0);
+  assert.equal(result.exitCode, 0);
+});
+
+test("runAgentDoctor reports stale instructions and CI failure for the stale fixture", async () => {
+  const projectRoot = await copyFixture("stale-repo");
+  const result = await runAgentDoctor({ projectRoot, ci: true });
+
+  assert.equal(result.report.summary.errorCount, 1);
+  assert.equal(result.report.summary.warningCount, 5);
+  assert.equal(result.report.summary.issueCount, 6);
+  assert.equal(result.exitCode, 1);
+});
+
+test("git-ignored example paths in instructions do not produce broken-path noise", async () => {
+  const projectRoot = await copyFixture("valid-repo");
+  const agentsPath = path.join(projectRoot, "AGENTS.md");
+  const gitignorePath = path.join(projectRoot, ".gitignore");
+  await Promise.all([
+    appendFile(
+      agentsPath,
+      "\nStore temporary analysis artifacts only in a git-ignored path such as `.codex/`, `tmp/`, or another explicitly ignored reports directory.\n",
+    ),
+    writeFile(gitignorePath, "reports/\n", "utf8"),
+  ]);
+
+  const result = await runAgentDoctor({ projectRoot });
+
+  assert.equal(result.report.summary.issueCount, 0);
+});
+
+test("nested AGENTS files are discovered and can resolve local relative paths", async () => {
+  const projectRoot = await copyFixture("valid-repo");
+  const nestedDirectory = path.join(projectRoot, "security", "checkout");
+  await mkdir(path.join(nestedDirectory, "docs"), { recursive: true });
+  await Promise.all([
+    writeFile(
+      path.join(nestedDirectory, "AGENTS.md"),
+      "Keep checkout notes in ./docs/runbook.md.\n",
+      "utf8",
+    ),
+    writeFile(path.join(nestedDirectory, "docs", "runbook.md"), "# Runbook\n", "utf8"),
+  ]);
+
+  const result = await runAgentDoctor({ projectRoot });
+
+  assert(result.report.scannedFiles.includes("security/checkout/AGENTS.md"));
+  assert.equal(result.report.summary.issueCount, 0);
+});
+
+test("json and codex outputs contain the documented structures", async () => {
+  const projectRoot = await copyFixture("stale-repo");
+  const result = await runAgentDoctor({ projectRoot });
+  const jsonReport = JSON.parse(result.outputs.json) as {
+    summary: { issueCount: number };
+    issues: Array<{ rule: string }>;
+  };
+
+  assert.equal(jsonReport.summary.issueCount, 6);
+  assert(jsonReport.issues.some((issue) => issue.rule === "brokenFileReferences"));
+  assert.match(
+    result.outputs.codex,
+    /Prefer repository facts over stale instruction text/u,
+  );
+  assert.match(result.outputs.codex, /## Task/u);
+});
+
+test("writeSummary creates report and summary artifacts", async () => {
+  const projectRoot = await copyFixture("stale-repo");
+  const result = await runAgentDoctor({ projectRoot, writeSummary: true });
+
+  assert(result.artifactPaths);
+  assert(await pathExists(result.artifactPaths!.reportPath));
+  assert(await pathExists(result.artifactPaths!.summaryPath));
+
+  const reportJson = JSON.parse(await readFile(result.artifactPaths!.reportPath, "utf8")) as {
+    summary: { issueCount: number };
+  };
+  const summaryMarkdown = await readFile(result.artifactPaths!.summaryPath, "utf8");
+
+  assert.equal(reportJson.summary.issueCount, 6);
+  assert.match(summaryMarkdown, /# Agent Doctor Summary/u);
+});

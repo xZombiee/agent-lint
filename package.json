@@ -1,0 +1,29 @@
+{
+  "name": "agent-doctor",
+  "version": "0.1.0",
+  "description": "CLI that finds stale, broken, and contradictory AI coding instructions in your repository.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "agent-doctor": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node src/cli.ts",
+    "scan": "node src/cli.ts",
+    "test": "node --test tests/unit/*.test.ts tests/integration/*.test.ts",
+    "check": "npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.8.3"
+  }
+}

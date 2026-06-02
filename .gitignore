@@ -1,0 +1,4 @@
+node_modules
+dist
+.agent-doctor/
+.DS_Store

@@ -1,0 +1,32 @@
+import type { ResolvedAgentDoctorConfig } from "../types.ts";
+
+export const defaultConfig: ResolvedAgentDoctorConfig = {
+  instructionFiles: [
+    "AGENTS.md",
+    "**/AGENTS.md",
+    "agents.md",
+    "**/agents.md",
+    "CLAUDE.md",
+    "**/CLAUDE.md",
+    "claude.md",
+    "**/claude.md",
+    ".cursor/rules/*.mdc",
+    "**/.cursor/rules/*.mdc",
+    ".github/copilot-instructions.md",
+    "**/.github/copilot-instructions.md",
+  ],
+  ignorePaths: ["node_modules", "dist", "build", ".next", ".git"],
+  artifactDir: ".agent-doctor",
+  rules: {
+    brokenFileReferences: true,
+    missingPackageScripts: true,
+    toolMismatch: true,
+    explicitContradictions: true,
+  },
+  severity: {
+    brokenFileReferences: "error",
+    missingPackageScripts: "warning",
+    toolMismatch: "warning",
+    explicitContradictions: "warning",
+  },
+};
