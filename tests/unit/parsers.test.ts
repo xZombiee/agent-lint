@@ -46,11 +46,28 @@ Internal doc links in \`docs/**/*.md\` must stay root-relative with no \`.md\` o
 Do not add localized docs under \`docs/<locale>/**\` here.
 Update \`docs/.i18n/glossary.<locale>.json\` as needed.
 Beta tags use \`vYYYY.M.D-beta.N\` and models like \`gpt-5.5\`, \`5.4\`, or \`GPT-4.x\`.
+Configure \`agents.defaults.skills\`, \`agents.list[].skills\`, and \`.i18n\` metadata.
 `);
 
   assert.deepStrictEqual(
     references.map((reference) => reference.path),
     ["/gateway/configuration", "docs/**/*.md"],
+  );
+});
+
+test("extractFilePaths cleans wrapper leftovers without dropping real paths", () => {
+  const references = extractFilePaths(`
+No deep internals (\`extensions/*/src/**\`, \`onboard.js\`).
+Run \`node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts\`.
+Do not treat \`...\`, \`openclaw/plugin-sdk/*\`, or **Discord/WhatsApp:** as paths.
+`);
+
+  assert.deepStrictEqual(
+    references.map((reference) => reference.path),
+    [
+      "scripts/run-vitest.mjs",
+      "test/vitest/vitest.tui-pty.config.ts",
+    ],
   );
 });
 
@@ -64,6 +81,7 @@ Plugin SDK exception: shipped external API gets new API first plus named compat/
 Before sharing WebVNC links, verify real app/path works.
 Handle real production states. Public/hostile/observed malformed input gets care.
 Full suites: Docker/package/E2E/live/cross-OS proof.
+Extension production code should import from \`openclaw/plugin-sdk/*\`.
 `);
 
   assert.deepStrictEqual(
@@ -78,6 +96,9 @@ Run npm test before pushing.
 Then run npm run lint.
 Use pnpm build for production checks.
 Do not treat npm install as a script command.
+Use repo wrappers (\`pnpm format:*\`, \`pnpm lint:*\`) and avoid bare \`pnpm test*\`.
+So pnpm runs inside Testbox, but this prose should not require a "runs" script.
+Root/plugin npm packages ship shrinkwrap, but this prose should not require a "packages" script.
 `);
 
   assert.deepStrictEqual(

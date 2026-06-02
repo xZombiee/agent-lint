@@ -12,3 +12,7 @@
 - Pipeline: update `docs/.i18n/glossary.<locale>.json` as needed, then let `scripts/docs-i18n` run in `openclaw/docs`.
 - Beta tag/version match: `vYYYY.M.D-beta.N` -> npm `YYYY.M.D-beta.N --tag beta`.
 - Vitest. Example models `sonnet-4.6`, `gpt-5.5`; test GPT with 5.5 preferred, 5.4 ok; no GPT-4.x defaults.
+- If you also want different visible skills per agent, configure `agents.defaults.skills` and `agents.list[].skills` in `openclaw.json`.
+- Extension production code should import from `openclaw/plugin-sdk/*`.
+- **Discord/WhatsApp:** No markdown tables.
+- Formatting: use repo wrappers (`pnpm format:*`, `pnpm lint:*`) and never use bare `pnpm test*`.

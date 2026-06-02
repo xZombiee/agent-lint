@@ -33,6 +33,7 @@ const WEAK_CODE_ROOT_SEGMENTS = new Set([
     "ui",
 ]);
 const EXTERNAL_REFERENCE_CONTEXT = /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|lives? in|owned|host)\b/iu;
+const EXTERNAL_LOCAL_PATH_CONTEXT = /\bin (?:the )?(?:separate )?publish repo\b|\bin (?:the )?separate [^.,;:]+ repo\b/iu;
 function sanitizeToken(token) {
     let value = token.trim();
     const wrapperPairs = [
@@ -47,7 +48,19 @@ function sanitizeToken(token) {
     let changed = true;
     while (changed && value.length > 1) {
         changed = false;
+        value = value.replace(/[.,;:!?]+(?=\*+$)/u, "");
         value = value.replace(/[.,;:!?]+$/u, "");
+        value = value.replace(/^[`"'([{]+/u, "");
+        value = value.replace(/[`"')\]}]+$/u, "");
+        if (/^\*+[A-Za-z]/u.test(value)) {
+            value = value.replace(/^\*+/u, "");
+            changed = true;
+        }
+        value = value.replace(/[.,;:!?]+(?=\*+$)/u, "");
+        if (/[A-Za-z]\*+$/u.test(value)) {
+            value = value.replace(/\*+$/u, "");
+            changed = true;
+        }
         for (const [prefix, suffix] of wrapperPairs) {
             if (value.startsWith(prefix) && value.endsWith(suffix)) {
                 value = value.slice(prefix.length, value.length - suffix.length).trim();
@@ -102,10 +115,45 @@ function isWordSlashPhrase(candidatePath) {
         segments.every((segment) => isWordLikeSegment(segment)));
 }
 function hasPlaceholderSyntax(candidatePath) {
-    return /<[^>]*>/u.test(candidatePath) || candidatePath.includes("<") || candidatePath.includes(">");
+    return (/<[^>]*>/u.test(candidatePath) ||
+        candidatePath.includes("<") ||
+        candidatePath.includes(">") ||
+        candidatePath.includes("{") ||
+        candidatePath.includes("}"));
 }
 function isLiteralExtensionToken(candidatePath) {
     return /^\.[A-Za-z]{1,8}$/u.test(candidatePath);
+}
+function isEllipsisToken(candidatePath) {
+    return /^\.{2,}$/u.test(candidatePath);
+}
+function isConfigKeyToken(candidatePath) {
+    if (candidatePath.includes("/") || KNOWN_ROOT_FILES.has(candidatePath)) {
+        return false;
+    }
+    const segments = candidatePath.split(".");
+    return (segments.length >= 3 &&
+        segments.every((segment) => /^[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?$/u.test(segment)));
+}
+function isAllowedBareDotfile(candidatePath) {
+    return new Set([
+        ".env",
+        ".env.local",
+        ".eslintrc",
+        ".gitignore",
+        ".npmrc",
+        ".prettierrc",
+        ".yarnrc",
+    ]).has(candidatePath);
+}
+function isBareConfigExample(candidatePath, line) {
+    if (candidatePath.includes("/") || KNOWN_ROOT_FILES.has(candidatePath)) {
+        return false;
+    }
+    if (!/^[A-Za-z0-9_-]+\.(json|ya?ml|toml)$/iu.test(candidatePath)) {
+        return false;
+    }
+    return /\b(configure|configuration|config|settings|defaults?|env|environment)\b/iu.test(line);
 }
 function isTemplateVersionToken(candidatePath) {
     return /^v?[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9-]*)+(?:-[A-Za-z0-9.-]+)?$/u.test(candidatePath);
@@ -121,6 +169,23 @@ function isVersionLikeToken(candidatePath) {
         isNumericVersionToken(candidatePath) ||
         isModelVersionToken(candidatePath));
 }
+function isPackageImportSpecifier(candidatePath) {
+    if (hasRelativePrefix(candidatePath) ||
+        candidatePath.startsWith("/") ||
+        candidatePath.startsWith(".") ||
+        hasFileExtension(candidatePath)) {
+        return false;
+    }
+    const segments = splitPathSegments(candidatePath);
+    const firstSegment = segments[0]?.toLowerCase() ?? "";
+    return (segments.length >= 2 &&
+        segments.length <= 3 &&
+        !STRONG_CODE_ROOT_SEGMENTS.has(firstSegment) &&
+        !WEAK_CODE_ROOT_SEGMENTS.has(firstSegment) &&
+        segments.every((segment, index) => index === segments.length - 1 && segment === "*"
+            ? true
+            : /^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(segment)));
+}
 function extractMarkdownLinkTargets(line) {
     const matches = line.matchAll(/\[[^\]]+\]\((?<target>[^)\s]+)\)/gu);
     const targets = [];
@@ -135,6 +200,16 @@ function extractMarkdownLinkTargets(line) {
 }
 function stripMarkdownLinks(line) {
     return line.replace(/\[[^\]]+\]\(([^)\s]+)\)/gu, " ");
+}
+function extractPathTokens(line) {
+    return [...line.matchAll(/[^\s]+/gu)].map((match) => ({
+        raw: match[0],
+        start: match.index ?? 0,
+    }));
+}
+function hasProhibitiveCueBefore(line, tokenStart) {
+    const context = line.slice(Math.max(0, tokenStart - 80), tokenStart).toLowerCase();
+    return /\b(no|never|do not|avoid|must not|forbid|forbidden|without)\b/u.test(context);
 }
 function isMarkdownRouteCandidate(candidatePath) {
     if (!candidatePath.startsWith("/")) {
@@ -160,8 +235,11 @@ function hasStrongLocalSignal(candidatePath) {
     if (candidatePath.startsWith("@")) {
         return false;
     }
-    if (hasPlaceholderSyntax(candidatePath) ||
+    if (isEllipsisToken(candidatePath) ||
+        hasPlaceholderSyntax(candidatePath) ||
         isLiteralExtensionToken(candidatePath) ||
+        isConfigKeyToken(candidatePath) ||
+        isPackageImportSpecifier(candidatePath) ||
         isVersionLikeToken(candidatePath)) {
         return false;
     }
@@ -170,7 +248,7 @@ function hasStrongLocalSignal(candidatePath) {
     }
     if (!candidatePath.includes("/")) {
         if (candidatePath.startsWith(".")) {
-            return candidatePath.length > 1;
+            return isAllowedBareDotfile(candidatePath);
         }
         return hasFileExtension(candidatePath);
     }
@@ -218,6 +296,11 @@ function isExternalReferenceCandidate(candidatePath, line) {
         segments.every((segment) => /^[a-z0-9][a-z0-9-]*$/u.test(segment)));
 }
 function classifyReferenceKind(candidatePath, line, section) {
+    if (EXTERNAL_LOCAL_PATH_CONTEXT.test(line) &&
+        !hasRelativePrefix(candidatePath) &&
+        !candidatePath.startsWith("/")) {
+        return "external";
+    }
     if (isExternalReferenceCandidate(candidatePath, line)) {
         return "external";
     }
@@ -239,7 +322,7 @@ export function extractFilePaths(content) {
         const seenPaths = new Set();
         const markdownTargets = extractMarkdownLinkTargets(line).map((target) => normalizePathToken(target, { preserveLeadingSlash: true }));
         const lineWithoutMarkdownLinks = stripMarkdownLinks(line);
-        const tokens = lineWithoutMarkdownLinks.match(/[^\s]+/gu) ?? [];
+        const tokens = extractPathTokens(lineWithoutMarkdownLinks);
         for (const markdownTarget of markdownTargets) {
             if (markdownTarget === "" ||
                 (!hasStrongLocalSignal(markdownTarget) &&
@@ -264,11 +347,15 @@ export function extractFilePaths(content) {
             references.push(reference);
         }
         for (const token of tokens) {
-            const sanitizedToken = sanitizeToken(token);
+            const sanitizedToken = sanitizeToken(token.raw);
             const normalizedToken = normalizePathToken(stripLineNumberSuffix(sanitizedToken));
             if (normalizedToken === "" ||
+                isBareConfigExample(normalizedToken, trimmedLine) ||
                 (!hasStrongLocalSignal(normalizedToken) &&
                     !isExternalReferenceCandidate(normalizedToken, trimmedLine))) {
+                continue;
+            }
+            if (hasProhibitiveCueBefore(lineWithoutMarkdownLinks, token.start)) {
                 continue;
             }
             if (seenPaths.has(normalizedToken)) {

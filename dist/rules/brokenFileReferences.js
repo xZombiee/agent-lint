@@ -4,7 +4,7 @@ import { matchesPathPattern } from "../utils/pathPatterns.js";
 import { findClosestPaths } from "../utils/pathSimilarity.js";
 function normalizeRepoPath(candidatePath) {
     const normalized = path.posix.normalize(candidatePath.replace(/\\/gu, "/"));
-    return normalized.replace(/^\/+/u, "").replace(/^\.\//u, "");
+    return normalized.replace(/^\/+/u, "").replace(/^\.\//u, "").replace(/\/+$/u, "");
 }
 function resolveReferenceCandidates(sourceFile, reference) {
     const instructionDirectory = path.posix.dirname(sourceFile);

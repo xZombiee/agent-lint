@@ -100,6 +100,11 @@ test("OpenClaw-style prose slash phrases do not become broken local path errors"
   assert(messages.every((message) => !message.includes("gpt-5.5")));
   assert(messages.every((message) => !message.includes("docs/<locale>/**")));
   assert(messages.every((message) => !message.includes("[Config](/gateway/configuration)")));
+  assert(messages.every((message) => !message.includes("agents.defaults.skills")));
+  assert(messages.every((message) => !message.includes("openclaw/plugin-sdk/*")));
+  assert(messages.every((message) => !message.includes("**Discord/WhatsApp:**")));
+  assert(messages.every((message) => !message.includes("pnpm format:*")));
+  assert(messages.every((message) => !message.includes("pnpm test*")));
 });
 
 test("unreadable directories do not crash the scan", async () => {
