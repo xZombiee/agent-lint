@@ -23,17 +23,34 @@ It can scan any repository, but package and tool checks only have strong guarant
 
 ## Install
 
-Run it directly with `npx`:
+Published npm install:
 
 ```bash
 npx agent-lint
 ```
 
-Or install it as a dev dependency:
+Until the package is published, use the GitHub source tarball. This path is stable for global and project-local installs:
 
 ```bash
-npm install -D agent-lint
+npm install -g https://github.com/xZombiee/agent-lint/archive/refs/heads/main.tar.gz
+agent-lint
 ```
+
+Project-local install:
+
+```bash
+npm install -D https://github.com/xZombiee/agent-lint/archive/refs/heads/main.tar.gz
+npx agent-lint
+```
+
+Project-local GitHub shorthand also works:
+
+```bash
+npm install -D github:xZombiee/agent-lint
+npx agent-lint
+```
+
+Avoid `npm install -g github:xZombiee/agent-lint` for now. On some npm/Homebrew combinations it creates the global binary link but leaves the package directory empty.
 
 ## Usage
 
