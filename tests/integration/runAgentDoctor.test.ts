@@ -84,7 +84,7 @@ test("OpenClaw-style prose slash phrases do not become broken local path errors"
 
   assert.equal(result.report.summary.errorCount, 1);
   assert.equal(result.report.summary.warningCount, 0);
-  assert.equal(result.report.summary.infoCount, 1);
+  assert.equal(result.report.summary.infoCount, 2);
 
   const messages = result.report.issues.map((issue) => issue.evidence.instructionText);
   assert(messages.some((message) => message.includes("extensions/telegram/src/index.ts:80")));
@@ -105,6 +105,9 @@ test("OpenClaw-style prose slash phrases do not become broken local path errors"
   assert(messages.every((message) => !message.includes("**Discord/WhatsApp:**")));
   assert(messages.every((message) => !message.includes("pnpm format:*")));
   assert(messages.every((message) => !message.includes("pnpm test*")));
+  assert(messages.every((message) => !message.includes("core/plugin")));
+  assert(messages.every((message) => !message.includes("release/")));
+  assert(messages.every((message) => !message.includes("../openclaw-docs")));
 });
 
 test("unreadable directories do not crash the scan", async () => {

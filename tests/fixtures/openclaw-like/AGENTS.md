@@ -16,3 +16,6 @@
 - Extension production code should import from `openclaw/plugin-sdk/*`.
 - **Discord/WhatsApp:** No markdown tables.
 - Formatting: use repo wrappers (`pnpm format:*`, `pnpm lint:*`) and never use bare `pnpm test*`.
+- Optional integrations route to owner repos; keep core/plugin APIs local.
+- Backport means apply to newest open `release/` branch.
+- Foreign-language docs are often cloned locally as `../openclaw-docs`.

@@ -152,6 +152,14 @@ test("brokenFileReferences resolves directory references without trailing slash 
   assert.equal(issues.length, 0);
 });
 
+test("brokenFileReferences suppresses unresolved environment assumptions", () => {
+  const issues = brokenFileReferences(
+    createContext("Use generated tiny plugin fixtures for `api.js` / `runtime-api.js` fallback behavior."),
+  );
+
+  assert.equal(issues.length, 0);
+});
+
 test("brokenFileReferences does not treat negated ignore rules as safe artifact paths", () => {
   const context = createContext(
     "Store temporary analysis artifacts only in a git-ignored path such as `.codex/`, `tmp/`, or another explicitly ignored reports directory.",

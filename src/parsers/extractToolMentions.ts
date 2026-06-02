@@ -7,6 +7,10 @@ function escapeRegExp(value: string): string {
 
 function detectStance(line: string, toolName: string): ToolMention["stance"] | null {
   const escapedToolName = escapeRegExp(toolName);
+  const bareCommandPattern = new RegExp(
+    `\\b(?:bare|raw)\\b[^.\\n]{0,24}\\b${escapedToolName}\\b|\\b${escapedToolName}\\b\\s+\\.\\.\\.`,
+    "iu",
+  );
 
   const avoidPattern = new RegExp(
     `\\b(do not use|don't use|avoid|never use)\\b[^.\\n]{0,40}\\b${escapedToolName}\\b`,
@@ -14,6 +18,10 @@ function detectStance(line: string, toolName: string): ToolMention["stance"] | n
   );
 
   if (avoidPattern.test(line)) {
+    if (bareCommandPattern.test(line)) {
+      return "mention";
+    }
+
     return "avoid";
   }
 

@@ -35,15 +35,17 @@ function colorSeverity(value: string, severity: AgentLintIssue["severity"], useC
 }
 
 function colorSummaryCount(label: string, count: number, useColor: boolean): string {
+  const value = formatCount(label, count);
+
   if (label === "error") {
-    return red(`${count} ${label}`, { useColor });
+    return red(value, { useColor });
   }
 
   if (label === "warning") {
-    return yellow(`${count} ${label}`, { useColor });
+    return yellow(value, { useColor });
   }
 
-  return blue(`${count} ${label}`, { useColor });
+  return blue(value, { useColor });
 }
 
 export function formatTerminalReport(

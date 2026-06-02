@@ -122,10 +122,14 @@ function buildInfoSuggestion(kind) {
     }
 }
 function shouldEmitInfoIssue(reference) {
+    if (reference.kind === "env") {
+        return false;
+    }
     if (reference.kind !== "external") {
         return true;
     }
-    return /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|lives? in|owned|host)\b/iu.test(reference.instructionText);
+    return (reference.path.startsWith("openclaw/") ||
+        /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|separate repo|cloned locally as)\b/iu.test(reference.instructionText));
 }
 function buildSuggestion(referencePath, suggestions) {
     if (suggestions.length === 0) {

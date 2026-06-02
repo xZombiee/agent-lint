@@ -21,13 +21,14 @@ function colorSeverity(value, severity, useColor) {
     return blue(value, { useColor });
 }
 function colorSummaryCount(label, count, useColor) {
+    const value = formatCount(label, count);
     if (label === "error") {
-        return red(`${count} ${label}`, { useColor });
+        return red(value, { useColor });
     }
     if (label === "warning") {
-        return yellow(`${count} ${label}`, { useColor });
+        return yellow(value, { useColor });
     }
-    return blue(`${count} ${label}`, { useColor });
+    return blue(value, { useColor });
 }
 export function formatTerminalReport(report, options) {
     const useColor = resolveColorUsage(options);

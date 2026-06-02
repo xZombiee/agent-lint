@@ -23,7 +23,7 @@ Ignore https://example.com/docs and @scope/package.
 test("extractFilePaths preserves explicit local paths, globs, and line anchors", () => {
   const references = extractFilePaths(`
 Replies use \`extensions/telegram/src/index.ts:80\` and \`.github/workflows/docs-sync-publish.yml\`.
-Installers live in sibling \`../openclaw.ai\`.
+Use \`../shared/config.ts\` for inherited config.
 Source docs stay under \`docs/**\` and plugin code under \`extensions/*/src/**\`.
 `);
 
@@ -32,7 +32,7 @@ Source docs stay under \`docs/**\` and plugin code under \`extensions/*/src/**\`
     [
       "extensions/telegram/src/index.ts",
       ".github/workflows/docs-sync-publish.yml",
-      "../openclaw.ai",
+      "../shared/config.ts",
       "docs/**",
       "extensions/*/src/**",
     ],
@@ -82,6 +82,11 @@ Before sharing WebVNC links, verify real app/path works.
 Handle real production states. Public/hostile/observed malformed input gets care.
 Full suites: Docker/package/E2E/live/cross-OS proof.
 Extension production code should import from \`openclaw/plugin-sdk/*\`.
+Freshness exceptions need named owner + tests.
+Prefer a small versioned host/kernel seam.
+Optional integrations route to owner repos; keep core/plugin APIs local.
+Backport means apply to newest open \`release/\` branch.
+The publish output is often cloned locally as \`../openclaw-docs\`.
 `);
 
   assert.deepStrictEqual(
@@ -112,11 +117,12 @@ test("extractToolMentions detects positive and negative tool guidance", () => {
 Use Jest for unit tests.
 Do not use Redux in this repository.
 Vitest is already configured.
+Never use bare Vitest in automation.
 `);
 
   assert.deepStrictEqual(
     mentions.map((mention) => `${mention.tool}:${mention.stance}`),
-    ["jest:use", "redux:avoid", "vitest:mention"],
+    ["jest:use", "redux:avoid", "vitest:mention", "vitest:mention"],
   );
 });
 

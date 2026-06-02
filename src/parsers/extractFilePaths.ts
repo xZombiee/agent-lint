@@ -41,7 +41,7 @@ const WEAK_CODE_ROOT_SEGMENTS = new Set([
 ]);
 
 const EXTERNAL_REFERENCE_CONTEXT =
-  /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|lives? in|owned|host)\b/iu;
+  /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|separate repo|cloned locally as)\b/iu;
 const EXTERNAL_LOCAL_PATH_CONTEXT =
   /\bin (?:the )?(?:separate )?publish repo\b|\bin (?:the )?separate [^.,;:]+ repo\b/iu;
 
@@ -298,6 +298,20 @@ function hasProhibitiveCueBefore(line: string, tokenStart: number): boolean {
   return /\b(no|never|do not|avoid|must not|forbid|forbidden|without)\b/u.test(context);
 }
 
+function isBranchPatternReference(candidatePath: string, line: string): boolean {
+  return (
+    /^[A-Za-z0-9._-]+\/$/u.test(candidatePath) &&
+    /\b(branch|branches|backport)\b/iu.test(line)
+  );
+}
+
+function isEnvironmentRelativeReference(candidatePath: string, line: string): boolean {
+  return (
+    candidatePath.startsWith("../") &&
+    /\b(sibling|cloned locally as|local clone|local checkout|workspace)\b/iu.test(line)
+  );
+}
+
 function isMarkdownRouteCandidate(candidatePath: string): boolean {
   if (!candidatePath.startsWith("/")) {
     return false;
@@ -392,10 +406,6 @@ function hasStrongLocalSignal(candidatePath: string): boolean {
 }
 
 function isExternalReferenceCandidate(candidatePath: string, line: string): boolean {
-  if (!EXTERNAL_REFERENCE_CONTEXT.test(line)) {
-    return false;
-  }
-
   if (
     hasRelativePrefix(candidatePath) ||
     candidatePath.endsWith("/") ||
@@ -408,11 +418,21 @@ function isExternalReferenceCandidate(candidatePath: string, line: string): bool
 
   const segments = splitPathSegments(candidatePath);
   const firstSegment = segments[0]?.toLowerCase() ?? "";
+  const isExplicitLiteral = line.includes(`\`${candidatePath}\``);
+
+  if (
+    firstSegment === "openclaw" &&
+    /\b(import|imports|importing|from)\b/iu.test(line)
+  ) {
+    return false;
+  }
 
   return (
     segments.length === 2 &&
     !STRONG_CODE_ROOT_SEGMENTS.has(firstSegment) &&
-    segments.every((segment) => /^[a-z0-9][a-z0-9-]*$/u.test(segment))
+    segments.every((segment) => /^[a-z0-9][a-z0-9-]*$/u.test(segment)) &&
+    (firstSegment === "openclaw" ||
+      (isExplicitLiteral && EXTERNAL_REFERENCE_CONTEXT.test(line)))
   );
 }
 
@@ -498,6 +518,8 @@ export function extractFilePaths(content: string): FileReference[] {
       if (
         normalizedToken === "" ||
         isBareConfigExample(normalizedToken, trimmedLine) ||
+        isBranchPatternReference(normalizedToken, trimmedLine) ||
+        isEnvironmentRelativeReference(normalizedToken, trimmedLine) ||
         (!hasStrongLocalSignal(normalizedToken) &&
           !isExternalReferenceCandidate(normalizedToken, trimmedLine))
       ) {
