@@ -436,10 +436,45 @@ function isExternalReferenceCandidate(candidatePath: string, line: string): bool
   );
 }
 
+function hasHardRequirementCue(line: string): boolean {
+  return /\b(must exist|required|requires|live in|lives in|stored in|stored under|add|create|update|edit|open|read|write)\b/iu.test(
+    line,
+  );
+}
+
+function isReferenceFormatExample(line: string): boolean {
+  return (
+    /\b(repo-root refs?|repository refs?|root-relative refs?|file refs?|path refs?|references?)\b.{0,48}\b(only|format|example)\b/iu.test(
+      line,
+    ) ||
+    /\b(only|format|example)\b.{0,48}\b(repo-root refs?|repository refs?|root-relative refs?|file refs?|path refs?|references?)\b/iu.test(
+      line,
+    )
+  );
+}
+
+function isCliOptionValueExample(line: string, tokenStart?: number): boolean {
+  if (tokenStart === undefined) {
+    return false;
+  }
+
+  const beforeToken = line.slice(0, tokenStart);
+
+  return /(?:^|\s)--[A-Za-z0-9][A-Za-z0-9-]*[=\s]+$/u.test(beforeToken);
+}
+
+function isConfigValueExample(line: string, candidatePath: string): boolean {
+  return new RegExp(
+    `^\\s*[A-Za-z0-9_.-]+\\s*:\\s*["']?${candidatePath.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}["']?\\s*,?\\s*$`,
+    "u",
+  ).test(line);
+}
+
 function classifyReferenceKind(
   candidatePath: string,
   line: string,
   section?: string,
+  tokenStart?: number,
 ): ReferenceKind {
   if (
     EXTERNAL_LOCAL_PATH_CONTEXT.test(line) &&
@@ -451,6 +486,15 @@ function classifyReferenceKind(
 
   if (isExternalReferenceCandidate(candidatePath, line)) {
     return "external";
+  }
+
+  if (
+    !hasHardRequirementCue(line) &&
+    (isReferenceFormatExample(line) ||
+      isCliOptionValueExample(line, tokenStart) ||
+      isConfigValueExample(line, candidatePath))
+  ) {
+    return "example";
   }
 
   return classifyReferenceContext(line, section);
@@ -541,7 +585,12 @@ export function extractFilePaths(content: string): FileReference[] {
         line: index + 1,
         instructionText: trimmedLine,
         token: sanitizedToken,
-        kind: classifyReferenceKind(normalizedToken, trimmedLine, currentSection),
+        kind: classifyReferenceKind(
+          normalizedToken,
+          trimmedLine,
+          currentSection,
+          token.start,
+        ),
         target: detectPathTargetKind(normalizedToken),
       };
 

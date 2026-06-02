@@ -82,13 +82,13 @@ test("OpenClaw-style prose slash phrases do not become broken local path errors"
   const projectRoot = await copyFixture("openclaw-like");
   const result = await runAgentLint({ projectRoot });
 
-  assert.equal(result.report.summary.errorCount, 1);
+  assert.equal(result.report.summary.errorCount, 0);
   assert.equal(result.report.summary.warningCount, 0);
-  assert.equal(result.report.summary.infoCount, 2);
+  assert.equal(result.report.summary.infoCount, 3);
 
   const messages = result.report.issues.map((issue) => issue.evidence.instructionText);
-  assert(messages.some((message) => message.includes("extensions/telegram/src/index.ts:80")));
   assert(messages.some((message) => message.includes("openclaw/docs")));
+  assert(messages.some((message) => message.includes("extensions/telegram/src/index.ts:80")));
   assert(messages.every((message) => !message.includes("Docs/user-visible")));
   assert(messages.every((message) => !message.includes("Fix/triage")));
   assert(messages.every((message) => !message.includes("docs/config")));

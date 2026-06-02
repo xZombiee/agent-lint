@@ -40,6 +40,23 @@ Source docs stay under \`docs/**\` and plugin code under \`extensions/*/src/**\`
   assert(references.every((reference) => reference.kind === "hard"));
 });
 
+test("extractFilePaths classifies reference-format and CLI option examples as examples", () => {
+  const references = extractFilePaths(`
+Replies: repo-root refs only: \`extensions/telegram/src/index.ts:80\`. No absolute paths, no \`~/\`.
+openclaw agents set-identity --agent main --avatar avatars/openclaw.png
+avatar: "avatars/openclaw.png",
+`);
+
+  assert.deepStrictEqual(
+    references.map((reference) => [reference.path, reference.kind]),
+    [
+      ["extensions/telegram/src/index.ts", "example"],
+      ["avatars/openclaw.png", "example"],
+      ["avatars/openclaw.png", "example"],
+    ],
+  );
+});
+
 test("extractFilePaths parses markdown link targets and filters literal/version placeholders", () => {
   const references = extractFilePaths(`
 Internal doc links in \`docs/**/*.md\` must stay root-relative with no \`.md\` or \`.mdx\` suffix (example: [Config](/gateway/configuration)).
