@@ -40,12 +40,30 @@ Source docs stay under \`docs/**\` and plugin code under \`extensions/*/src/**\`
   assert(references.every((reference) => reference.kind === "hard"));
 });
 
+test("extractFilePaths parses markdown link targets and filters literal/version placeholders", () => {
+  const references = extractFilePaths(`
+Internal doc links in \`docs/**/*.md\` must stay root-relative with no \`.md\` or \`.mdx\` suffix (example: [Config](/gateway/configuration)).
+Do not add localized docs under \`docs/<locale>/**\` here.
+Update \`docs/.i18n/glossary.<locale>.json\` as needed.
+Beta tags use \`vYYYY.M.D-beta.N\` and models like \`gpt-5.5\`, \`5.4\`, or \`GPT-4.x\`.
+`);
+
+  assert.deepStrictEqual(
+    references.map((reference) => reference.path),
+    ["/gateway/configuration", "docs/**/*.md"],
+  );
+});
+
 test("extractFilePaths drops prose slash phrases and keeps external repo references separate", () => {
   const references = extractFilePaths(`
 Docs/user-visible work: \`pnpm docs:list\`, then read relevant docs only.
 Fix/triage answers need source, tests, current/shipped behavior, and dependency contract proof.
 Prefer findings for docs/config mismatches and compat/deprecation noise.
 Publish repo: \`openclaw/docs\`.
+Plugin SDK exception: shipped external API gets new API first plus named compat/deprecation, small tests/docs if useful, removal plan.
+Before sharing WebVNC links, verify real app/path works.
+Handle real production states. Public/hostile/observed malformed input gets care.
+Full suites: Docker/package/E2E/live/cross-OS proof.
 `);
 
   assert.deepStrictEqual(

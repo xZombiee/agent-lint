@@ -17,7 +17,7 @@ export function classifyReferenceContext(
       context,
     ) ||
     /\b(store|write|place|keep)\b.{0,40}\b(in|under|inside)\b/u.test(context) ||
-    /\b(do not create|avoid writing)\b/u.test(context)
+    /\b(do not create|avoid writing|suffix)\b/u.test(context)
   ) {
     return "policy";
   }
@@ -29,7 +29,7 @@ export function classifyReferenceContext(
   }
 
   if (
-    /\b(runtime|ci|machine-specific|symlink|generated at runtime|created during|depends on environment|local environment)\b/u.test(
+    /\b(runtime|ci|machine-specific|symlink|generated at runtime|created during|depends on environment|local environment|environment variables?|env vars?|config option|config shape|local-only|git\/info\/exclude)\b/u.test(
       context,
     )
   ) {

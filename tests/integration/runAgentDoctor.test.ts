@@ -93,6 +93,13 @@ test("OpenClaw-style prose slash phrases do not become broken local path errors"
   assert(messages.every((message) => !message.includes("Fix/triage")));
   assert(messages.every((message) => !message.includes("docs/config")));
   assert(messages.every((message) => !message.includes("compat/deprecation")));
+  assert(messages.every((message) => !message.includes("Public/hostile/observed")));
+  assert(messages.every((message) => !message.includes("app/path")));
+  assert(messages.every((message) => !message.includes("Docker/package/E2E/live/cross-OS")));
+  assert(messages.every((message) => !message.includes("vYYYY.M.D-beta.N")));
+  assert(messages.every((message) => !message.includes("gpt-5.5")));
+  assert(messages.every((message) => !message.includes("docs/<locale>/**")));
+  assert(messages.every((message) => !message.includes("[Config](/gateway/configuration)")));
 });
 
 test("unreadable directories do not crash the scan", async () => {

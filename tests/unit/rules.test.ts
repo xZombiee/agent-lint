@@ -127,6 +127,23 @@ test("brokenFileReferences resolves glob patterns against repository files", () 
   assert.equal(issues.length, 0);
 });
 
+test("brokenFileReferences resolves docs route links and bare filenames by basename", () => {
+  const context = createContext(`
+See [Config](/gateway/configuration).
+The flow runs in \`docs-sync-publish.yml\`.
+`);
+  context.instructionFiles = [createInstructionFile("docs/AGENTS.md", `
+See [Config](/gateway/configuration).
+The flow runs in \`docs-sync-publish.yml\`.
+`)];
+  context.repoFiles.push("docs/gateway/configuration.md", ".github/workflows/docs-sync-publish.yml");
+  context.repoDirectories.push("docs", "docs/gateway", ".github", ".github/workflows");
+
+  const issues = brokenFileReferences(context);
+
+  assert.equal(issues.length, 0);
+});
+
 test("brokenFileReferences does not treat negated ignore rules as safe artifact paths", () => {
   const context = createContext(
     "Store temporary analysis artifacts only in a git-ignored path such as `.codex/`, `tmp/`, or another explicitly ignored reports directory.",

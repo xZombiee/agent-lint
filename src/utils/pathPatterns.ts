@@ -20,6 +20,7 @@ export function matchesPathPattern(candidatePath: string, pattern: string): bool
 
   const placeholder = "__DOUBLE_STAR__";
   const patternSource = escapeRegExp(normalizedPattern)
+    .replace(/\\\*\\\*\//gu, "(?:.*/)?")
     .replace(/\\\*\\\*/gu, placeholder)
     .replace(/\\\*/gu, "[^/]*")
     .replace(/\\\?/gu, "[^/]")

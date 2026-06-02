@@ -3,3 +3,12 @@
 - Fix/triage answers need source, tests, current/shipped behavior, and dependency contract proof.
 - Prefer findings for docs/config mismatches and compat/deprecation noise.
 - Source docs: `docs/**`; publish repo: `openclaw/docs`; host: `https://docs.openclaw.ai`.
+- Handle real production states. Public/hostile/observed malformed input gets care; hypothetical malformed input does not.
+- Plugin SDK exception: shipped external API gets new API first plus named compat/deprecation, small tests/docs if useful, removal plan.
+- Full suites: Docker/package/E2E/live/cross-OS proof.
+- Before sharing WebVNC links, verify real app/path works.
+- Internal doc links in `docs/**/*.md` must stay root-relative with no `.md` or `.mdx` suffix (example: [Config](/guide)).
+- Do not add localized docs under `docs/<locale>/**` here.
+- Pipeline: update `docs/.i18n/glossary.<locale>.json` as needed, then let `scripts/docs-i18n` run in `openclaw/docs`.
+- Beta tag/version match: `vYYYY.M.D-beta.N` -> npm `YYYY.M.D-beta.N --tag beta`.
+- Vitest. Example models `sonnet-4.6`, `gpt-5.5`; test GPT with 5.5 preferred, 5.4 ok; no GPT-4.x defaults.

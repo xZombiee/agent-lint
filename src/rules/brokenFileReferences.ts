@@ -27,6 +27,20 @@ function resolveReferenceCandidates(
 
   candidates.add(normalizeRepoPath(reference.path));
 
+  if (
+    rawPath.startsWith("/") &&
+    sourceFile.startsWith("docs/") &&
+    !rawPath.includes("*") &&
+    !rawPath.includes("?")
+  ) {
+    const docsRoute = normalizeRepoPath(rawPath);
+
+    candidates.add(normalizeRepoPath(path.posix.join("docs", `${docsRoute}.md`)));
+    candidates.add(normalizeRepoPath(path.posix.join("docs", `${docsRoute}.mdx`)));
+    candidates.add(normalizeRepoPath(path.posix.join("docs", docsRoute, "index.md")));
+    candidates.add(normalizeRepoPath(path.posix.join("docs", docsRoute, "index.mdx")));
+  }
+
   if (rawPath.startsWith("./") || rawPath.startsWith("../")) {
     candidates.add(
       normalizeRepoPath(path.posix.join(instructionDirectory, rawPath)),
@@ -55,6 +69,14 @@ function referenceExists(
   return candidates.some((candidate) => {
     if (candidate.includes("*") || candidate.includes("?")) {
       return collection.some((entry) => matchesPathPattern(entry, candidate));
+    }
+
+    if (
+      reference.target === "file" &&
+      !candidate.includes("/") &&
+      context.repoFiles.some((entry) => path.posix.basename(entry) === candidate)
+    ) {
+      return true;
     }
 
     return collection.includes(candidate);
