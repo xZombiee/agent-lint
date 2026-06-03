@@ -1,5 +1,5 @@
 import { findClosestMatches } from "../utils/pathSimilarity.ts";
-import { findNearestPackageJson } from "../utils/packageJsonLookup.ts";
+import { findPackageJsonForCommand } from "../utils/packageJsonLookup.ts";
 import type { AgentLintIssue, ScanContext } from "../types.ts";
 
 function buildCommandSuggestion(packageManager: string, suggestions: string[]): string {
@@ -16,15 +16,19 @@ export function missingPackageScripts(context: ScanContext): AgentLintIssue[] {
   const issues: AgentLintIssue[] = [];
 
   for (const instructionFile of context.instructionFiles) {
-    const packageJson = findNearestPackageJson(context, instructionFile.path);
-
-    if (!packageJson) {
-      continue;
-    }
-
-    const packageScripts = Object.keys(packageJson.data.scripts ?? {});
-
     for (const command of instructionFile.commands) {
+      const packageJson = findPackageJsonForCommand(
+        context,
+        instructionFile.path,
+        command,
+      );
+
+      if (!packageJson) {
+        continue;
+      }
+
+      const packageScripts = Object.keys(packageJson.data.scripts ?? {});
+
       if (packageScripts.includes(command.scriptName)) {
         continue;
       }

@@ -78,6 +78,14 @@ function resolveReferenceCandidates(
       normalizeRepoPath(path.posix.join(instructionDirectory, rawPath)),
     );
   } else if (instructionDirectory !== "." && instructionDirectory !== "") {
+    if (reference.contextDirectory) {
+      candidates.add(
+        normalizeRepoPath(
+          path.posix.join(instructionDirectory, reference.contextDirectory, rawPath),
+        ),
+      );
+    }
+
     if (packageRootAnchor) {
       candidates.add(normalizeRepoPath(path.posix.join(packageRootAnchor, rawPath)));
     }

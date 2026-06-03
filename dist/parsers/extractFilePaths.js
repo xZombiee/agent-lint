@@ -169,7 +169,7 @@ function isConfigKeyToken(candidatePath) {
         return false;
     }
     return (segments.length >= 2 &&
-        segments.every((segment) => /^[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?$/u.test(segment)));
+        segments.every((segment) => /^[A-Za-z_$][A-Za-z0-9_$-]*(?:\[\])?$/u.test(segment)));
 }
 function isCommonAbbreviationToken(candidatePath) {
     return COMMON_ABBREVIATION_TOKENS.has(candidatePath.toLowerCase());
@@ -203,6 +203,10 @@ function isRuntimeGeneratedArtifact(candidatePath, line) {
     }
     return /\b(generated|runtime|persistence|persisted|stores?|stored|storage|cache|event stream|events?|sample|fixtures?|global storage|created|written)\b/iu.test(line);
 }
+function isGenericRuntimeFileReference(candidatePath, line) {
+    return (candidatePath === "CLAUDE.md" &&
+        /\b(memory files?|memory command|user memory|open memory)\b/iu.test(line));
+}
 function isTemplateVersionToken(candidatePath) {
     return /^v?[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9-]*)+(?:-[A-Za-z0-9.-]+)?$/u.test(candidatePath);
 }
@@ -223,6 +227,18 @@ function isMarkdownInventoryLine(line) {
 }
 function isDirectoryInventoryReference(candidatePath, line) {
     return candidatePath.endsWith("/") && isMarkdownInventoryLine(line);
+}
+function isSchemaPatternReference(candidatePath, line) {
+    return hasGlob(candidatePath) && /^\s*\|[^|\n]*`[^`]+`[^|\n]*\|/u.test(line);
+}
+function isTreeDiagramDirectoryReference(candidatePath, line) {
+    const trimmedLine = line.trim();
+    return (candidatePath.endsWith("/") &&
+        (trimmedLine === candidatePath ||
+            /^[│├└─\s]*[A-Za-z0-9._-]+\/(?:\s*#.*)?$/u.test(trimmedLine)));
+}
+function isReferenceConfigExampleLine(line) {
+    return /^\s*(?:command|pattern|schema|location|path)\s*:\s*["']?/iu.test(line);
 }
 function isPackageImportSpecifier(candidatePath) {
     if (hasRelativePrefix(candidatePath) ||
@@ -381,7 +397,10 @@ function isCliOptionValue(line, tokenStart) {
 function isConfigValue(line, candidatePath) {
     return new RegExp(`^\\s*[A-Za-z0-9_.-]+\\s*:\\s*["']?${candidatePath.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}["']?\\s*,?\\s*$`, "u").test(line);
 }
-function classifyReferenceKind(candidatePath, line, section, tokenStart) {
+function classifyReferenceKind(candidatePath, line, section, options) {
+    if (options?.insideFencedCode) {
+        return "env";
+    }
     if (EXTERNAL_LOCAL_PATH_CONTEXT.test(line) &&
         !hasRelativePrefix(candidatePath) &&
         !candidatePath.startsWith("/")) {
@@ -390,14 +409,19 @@ function classifyReferenceKind(candidatePath, line, section, tokenStart) {
     if (isExternalReferenceCandidate(candidatePath, line)) {
         return "external";
     }
-    if (!hasHardRequirementCue(line) && isRuntimeGeneratedArtifact(candidatePath, line)) {
+    if (isGenericRuntimeFileReference(candidatePath, line) ||
+        (!hasHardRequirementCue(line) &&
+            (isRuntimeGeneratedArtifact(candidatePath, line) ||
+                isSchemaPatternReference(candidatePath, line) ||
+                isTreeDiagramDirectoryReference(candidatePath, line) ||
+                isReferenceConfigExampleLine(line)))) {
         return "env";
     }
     if (!hasHardRequirementCue(line) &&
         (isReferenceFormatExample(line) ||
             isDirectoryInventoryReference(candidatePath, line) ||
             (/\b(example|sample|for example|e\.g\.|placeholder)\b/iu.test(line) &&
-                (isCliOptionValue(line, tokenStart) ||
+                (isCliOptionValue(line, options?.tokenStart) ||
                     isConfigValue(line, candidatePath))))) {
         return "example";
     }
@@ -407,16 +431,43 @@ export function extractFilePaths(content) {
     const references = [];
     const lines = content.split(/\r?\n/u);
     let currentSection;
+    let currentContextDirectory;
+    let insideFencedCode = false;
+    function getReferenceContextDirectory(candidatePath) {
+        if (candidatePath.includes("/") || currentContextDirectory === undefined) {
+            return undefined;
+        }
+        return currentContextDirectory;
+    }
+    function updateContextDirectoryFromLine(lineReferences, line) {
+        if (!/^\s*(?:\*\*)?(?:Location|Directory|Folder|Path)(?:\*\*)?\s*:/iu.test(line)) {
+            return;
+        }
+        const contextReference = lineReferences.find((reference) => reference.path.includes("/"));
+        if (!contextReference) {
+            return;
+        }
+        currentContextDirectory =
+            contextReference.target === "file"
+                ? contextReference.path.split("/").slice(0, -1).join("/")
+                : contextReference.path.replace(/\/+$/u, "");
+    }
     lines.forEach((line, index) => {
         const trimmedLine = line.trim();
         if (trimmedLine === "") {
             return;
         }
+        if (/^(```|~~~)/u.test(trimmedLine)) {
+            insideFencedCode = !insideFencedCode;
+            return;
+        }
         if (/^#{1,6}\s+/u.test(trimmedLine)) {
             currentSection = trimmedLine.replace(/^#{1,6}\s+/u, "");
+            currentContextDirectory = undefined;
             return;
         }
         const seenPaths = new Set();
+        const lineReferences = [];
         const markdownTargets = extractMarkdownLinkTargets(line).map((target) => normalizePathToken(target, { preserveLeadingSlash: true }));
         const lineWithoutMarkdownLinks = stripMarkdownLinks(line);
         const tokens = extractPathTokens(lineWithoutMarkdownLinks);
@@ -435,13 +486,16 @@ export function extractFilePaths(content) {
                 line: index + 1,
                 instructionText: trimmedLine,
                 token: markdownTarget,
-                kind: classifyReferenceKind(markdownTarget, trimmedLine, currentSection),
+                kind: classifyReferenceKind(markdownTarget, trimmedLine, currentSection, {
+                    insideFencedCode,
+                }),
                 target: detectPathTargetKind(markdownTarget),
             };
             if (currentSection !== undefined) {
                 reference.section = currentSection;
             }
             references.push(reference);
+            lineReferences.push(reference);
         }
         for (const token of tokens) {
             const sanitizedToken = sanitizeToken(token.raw);
@@ -467,14 +521,23 @@ export function extractFilePaths(content) {
                 line: index + 1,
                 instructionText: trimmedLine,
                 token: sanitizedToken,
-                kind: classifyReferenceKind(normalizedToken, trimmedLine, currentSection, token.start),
+                kind: classifyReferenceKind(normalizedToken, trimmedLine, currentSection, {
+                    tokenStart: token.start,
+                    insideFencedCode,
+                }),
                 target: detectPathTargetKind(normalizedToken),
             };
+            const contextDirectory = getReferenceContextDirectory(normalizedToken);
+            if (contextDirectory !== undefined) {
+                reference.contextDirectory = contextDirectory;
+            }
             if (currentSection !== undefined) {
                 reference.section = currentSection;
             }
             references.push(reference);
+            lineReferences.push(reference);
         }
+        updateContextDirectoryFromLine(lineReferences, trimmedLine);
     });
     return references;
 }

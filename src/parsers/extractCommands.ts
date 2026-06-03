@@ -41,6 +41,17 @@ function isPatternScriptReference(line: string, matchEnd: number, commandName: s
   );
 }
 
+function extractWorkingDirectory(line: string, matchEnd: number): string | undefined {
+  const afterCommand = line.slice(matchEnd);
+  const match =
+    /\b(?:in|inside|from)\s+(?:the\s+)?`?(?<directory>[A-Za-z0-9._/-]+)`?\s+(?:folder|directory|dir)\b/iu.exec(
+      afterCommand,
+    );
+  const directory = match?.groups?.directory?.replace(/^\.\/+/u, "").replace(/\/+$/u, "");
+
+  return directory === "" ? undefined : directory;
+}
+
 export function extractCommands(content: string): ScriptCommand[] {
   const commands: ScriptCommand[] = [];
   const lines = content.split(/\r?\n/u);
@@ -86,14 +97,21 @@ export function extractCommands(content: string): ScriptCommand[] {
         continue;
       }
 
-      commands.push({
+      const command: ScriptCommand = {
         packageManager,
         scriptName,
         rawCommand: match[0],
         line: index + 1,
         instructionText: trimmedLine,
         explicitRun,
-      });
+      };
+      const workingDirectory = extractWorkingDirectory(line, matchEnd);
+
+      if (workingDirectory !== undefined) {
+        command.workingDirectory = workingDirectory;
+      }
+
+      commands.push(command);
     }
   });
 

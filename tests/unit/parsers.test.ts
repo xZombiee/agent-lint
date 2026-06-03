@@ -102,6 +102,8 @@ for (let i = 0, n = str.length; i < 10; i++) {}
 The pipeline writes to state.groups and Promise.all resolves metadata.
 Trackpad pinch reports e.ctrlKey and Node.js-specific behavior.
 This setting table includes \`mcp.enabled\` and \`branchSupport.enabled\`.
+Commands dispatch via \`workbench.action.chat.openSessionWithPrompt.claude-code\`.
+The bottom bar uses \`div.bottom-bar\`.
 These docs mention e.g. and i.e. abbreviations.
 `);
 
@@ -112,6 +114,7 @@ test("extractFilePaths treats runtime generated artifacts as environment assumpt
   const references = extractFilePaths(`
 - \`events.jsonl\` — Ordered event stream.
 - Stores image data as files in extension global storage (\`copilot-cli-images/\`).
+- \`/memory\` - Open memory files (CLAUDE.md) for editing.
 `);
 
   assert.deepStrictEqual(
@@ -119,6 +122,28 @@ test("extractFilePaths treats runtime generated artifacts as environment assumpt
     [
       ["events.jsonl", "env"],
       ["copilot-cli-images/", "env"],
+      ["CLAUDE.md", "env"],
+    ],
+  );
+});
+
+test("extractFilePaths treats schema tables and fenced config examples as environment assumptions", () => {
+  const references = extractFilePaths(`
+| \`.github/agents/*.agent.md\` | Workspace |
+\`\`\`yaml
+command: "./scripts/validate.sh"
+command: "./scripts/format.sh"
+\`\`\`
+copilotcli/
+`);
+
+  assert.deepStrictEqual(
+    references.map((reference) => [reference.path, reference.kind]),
+    [
+      [".github/agents/*.agent.md", "env"],
+      ["scripts/validate.sh", "env"],
+      ["scripts/format.sh", "env"],
+      ["copilotcli/", "env"],
     ],
   );
 });
@@ -152,6 +177,7 @@ test("extractCommands detects package-manager script references", () => {
 Run npm test before pushing.
 Then run npm run lint.
 Use pnpm build for production checks.
+Run npm run typecheck in the \`build\` folder.
 Do not treat npm install as a script command.
 Use repo wrappers (\`pnpm format:*\`, \`pnpm lint:*\`) and avoid bare \`pnpm test*\`.
 So pnpm runs inside Testbox, but this prose should not require a "runs" script.
@@ -160,8 +186,9 @@ Root/plugin npm packages ship shrinkwrap, but this prose should not require a "p
 
   assert.deepStrictEqual(
     commands.map((command) => `${command.packageManager}:${command.scriptName}`),
-    ["npm:test", "npm:lint", "pnpm:build"],
+    ["npm:test", "npm:lint", "pnpm:build", "npm:typecheck"],
   );
+  assert.equal(commands[3]?.workingDirectory, "build");
 });
 
 test("extractPackageManagerMentions detects install and script commands", () => {

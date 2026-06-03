@@ -82,6 +82,7 @@ export interface FileReference {
   kind: ReferenceKind;
   target: PathTargetKind;
   section?: string;
+  contextDirectory?: string;
 }
 
 export interface GitIgnoreRule {
@@ -99,6 +100,7 @@ export interface ScriptCommand {
   line: number;
   instructionText: string;
   explicitRun: boolean;
+  workingDirectory?: string;
 }
 
 export interface PackageManagerMention {

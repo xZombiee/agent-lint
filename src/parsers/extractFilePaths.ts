@@ -221,7 +221,7 @@ function isConfigKeyToken(candidatePath: string): boolean {
 
   return (
     segments.length >= 2 &&
-    segments.every((segment) => /^[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?$/u.test(segment))
+    segments.every((segment) => /^[A-Za-z_$][A-Za-z0-9_$-]*(?:\[\])?$/u.test(segment))
   );
 }
 
@@ -269,6 +269,13 @@ function isRuntimeGeneratedArtifact(candidatePath: string, line: string): boolea
   );
 }
 
+function isGenericRuntimeFileReference(candidatePath: string, line: string): boolean {
+  return (
+    candidatePath === "CLAUDE.md" &&
+    /\b(memory files?|memory command|user memory|open memory)\b/iu.test(line)
+  );
+}
+
 function isTemplateVersionToken(candidatePath: string): boolean {
   return /^v?[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9-]*)+(?:-[A-Za-z0-9.-]+)?$/u.test(
     candidatePath,
@@ -302,6 +309,24 @@ function isMarkdownInventoryLine(line: string): boolean {
 
 function isDirectoryInventoryReference(candidatePath: string, line: string): boolean {
   return candidatePath.endsWith("/") && isMarkdownInventoryLine(line);
+}
+
+function isSchemaPatternReference(candidatePath: string, line: string): boolean {
+  return hasGlob(candidatePath) && /^\s*\|[^|\n]*`[^`]+`[^|\n]*\|/u.test(line);
+}
+
+function isTreeDiagramDirectoryReference(candidatePath: string, line: string): boolean {
+  const trimmedLine = line.trim();
+
+  return (
+    candidatePath.endsWith("/") &&
+    (trimmedLine === candidatePath ||
+      /^[│├└─\s]*[A-Za-z0-9._-]+\/(?:\s*#.*)?$/u.test(trimmedLine))
+  );
+}
+
+function isReferenceConfigExampleLine(line: string): boolean {
+  return /^\s*(?:command|pattern|schema|location|path)\s*:\s*["']?/iu.test(line);
 }
 
 function isPackageImportSpecifier(candidatePath: string): boolean {
@@ -542,8 +567,12 @@ function classifyReferenceKind(
   candidatePath: string,
   line: string,
   section?: string,
-  tokenStart?: number,
+  options?: { tokenStart?: number; insideFencedCode?: boolean },
 ): ReferenceKind {
+  if (options?.insideFencedCode) {
+    return "env";
+  }
+
   if (
     EXTERNAL_LOCAL_PATH_CONTEXT.test(line) &&
     !hasRelativePrefix(candidatePath) &&
@@ -556,7 +585,14 @@ function classifyReferenceKind(
     return "external";
   }
 
-  if (!hasHardRequirementCue(line) && isRuntimeGeneratedArtifact(candidatePath, line)) {
+  if (
+    isGenericRuntimeFileReference(candidatePath, line) ||
+    (!hasHardRequirementCue(line) &&
+      (isRuntimeGeneratedArtifact(candidatePath, line) ||
+        isSchemaPatternReference(candidatePath, line) ||
+        isTreeDiagramDirectoryReference(candidatePath, line) ||
+        isReferenceConfigExampleLine(line)))
+  ) {
     return "env";
   }
 
@@ -565,7 +601,7 @@ function classifyReferenceKind(
     (isReferenceFormatExample(line) ||
       isDirectoryInventoryReference(candidatePath, line) ||
       (/\b(example|sample|for example|e\.g\.|placeholder)\b/iu.test(line) &&
-        (isCliOptionValue(line, tokenStart) ||
+        (isCliOptionValue(line, options?.tokenStart) ||
           isConfigValue(line, candidatePath))))
   ) {
     return "example";
@@ -578,6 +614,35 @@ export function extractFilePaths(content: string): FileReference[] {
   const references: FileReference[] = [];
   const lines = content.split(/\r?\n/u);
   let currentSection: string | undefined;
+  let currentContextDirectory: string | undefined;
+  let insideFencedCode = false;
+
+  function getReferenceContextDirectory(candidatePath: string): string | undefined {
+    if (candidatePath.includes("/") || currentContextDirectory === undefined) {
+      return undefined;
+    }
+
+    return currentContextDirectory;
+  }
+
+  function updateContextDirectoryFromLine(lineReferences: FileReference[], line: string): void {
+    if (
+      !/^\s*(?:\*\*)?(?:Location|Directory|Folder|Path)(?:\*\*)?\s*:/iu.test(line)
+    ) {
+      return;
+    }
+
+    const contextReference = lineReferences.find((reference) => reference.path.includes("/"));
+
+    if (!contextReference) {
+      return;
+    }
+
+    currentContextDirectory =
+      contextReference.target === "file"
+        ? contextReference.path.split("/").slice(0, -1).join("/")
+        : contextReference.path.replace(/\/+$/u, "");
+  }
 
   lines.forEach((line, index) => {
     const trimmedLine = line.trim();
@@ -586,12 +651,19 @@ export function extractFilePaths(content: string): FileReference[] {
       return;
     }
 
+    if (/^(```|~~~)/u.test(trimmedLine)) {
+      insideFencedCode = !insideFencedCode;
+      return;
+    }
+
     if (/^#{1,6}\s+/u.test(trimmedLine)) {
       currentSection = trimmedLine.replace(/^#{1,6}\s+/u, "");
+      currentContextDirectory = undefined;
       return;
     }
 
     const seenPaths = new Set<string>();
+    const lineReferences: FileReference[] = [];
     const markdownTargets = extractMarkdownLinkTargets(line).map((target) =>
       normalizePathToken(target, { preserveLeadingSlash: true }),
     );
@@ -616,7 +688,9 @@ export function extractFilePaths(content: string): FileReference[] {
         line: index + 1,
         instructionText: trimmedLine,
         token: markdownTarget,
-        kind: classifyReferenceKind(markdownTarget, trimmedLine, currentSection),
+        kind: classifyReferenceKind(markdownTarget, trimmedLine, currentSection, {
+          insideFencedCode,
+        }),
         target: detectPathTargetKind(markdownTarget),
       };
 
@@ -625,6 +699,7 @@ export function extractFilePaths(content: string): FileReference[] {
       }
 
       references.push(reference);
+      lineReferences.push(reference);
     }
 
     for (const token of tokens) {
@@ -663,17 +738,29 @@ export function extractFilePaths(content: string): FileReference[] {
           normalizedToken,
           trimmedLine,
           currentSection,
-          token.start,
+          {
+            tokenStart: token.start,
+            insideFencedCode,
+          },
         ),
         target: detectPathTargetKind(normalizedToken),
       };
+
+      const contextDirectory = getReferenceContextDirectory(normalizedToken);
+
+      if (contextDirectory !== undefined) {
+        reference.contextDirectory = contextDirectory;
+      }
 
       if (currentSection !== undefined) {
         reference.section = currentSection;
       }
 
       references.push(reference);
+      lineReferences.push(reference);
     }
+
+    updateContextDirectoryFromLine(lineReferences, trimmedLine);
   });
 
   return references;

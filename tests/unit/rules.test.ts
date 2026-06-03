@@ -298,6 +298,35 @@ test("brokenFileReferences resolves package-root paths from nested .github instr
   assert.equal(issues.length, 0);
 });
 
+test("brokenFileReferences resolves bare filenames against a local location context", () => {
+  const content = `
+**Location:** \`node/hooks/claudeHookRegistry.ts\`
+- \`loggingHooks.ts\` - Logging hooks for debugging.
+`;
+  const context = createContext(content);
+  context.instructionFiles = [
+    createInstructionFile("extensions/copilot/src/extension/chatSessions/claude/AGENTS.md", content),
+  ];
+  context.repoFiles.push(
+    "extensions/copilot/src/extension/chatSessions/claude/node/hooks/claudeHookRegistry.ts",
+    "extensions/copilot/src/extension/chatSessions/claude/node/hooks/loggingHooks.ts",
+  );
+  context.repoDirectories.push(
+    "extensions",
+    "extensions/copilot",
+    "extensions/copilot/src",
+    "extensions/copilot/src/extension",
+    "extensions/copilot/src/extension/chatSessions",
+    "extensions/copilot/src/extension/chatSessions/claude",
+    "extensions/copilot/src/extension/chatSessions/claude/node",
+    "extensions/copilot/src/extension/chatSessions/claude/node/hooks",
+  );
+
+  const issues = brokenFileReferences(context);
+
+  assert.equal(issues.length, 0);
+});
+
 test("missingPackageScripts uses the nearest package.json for nested instructions", () => {
   const context = createContext("Run `npm run test:unit` before pushing.");
   context.instructionFiles = [
@@ -307,6 +336,19 @@ test("missingPackageScripts uses the nearest package.json for nested instruction
   context.packageJsons = [
     { path: "package.json", data: { scripts: {} } },
     { path: "extensions/copilot/package.json", data: { scripts: { "test:unit": "node test.js" } } },
+  ];
+
+  const issues = missingPackageScripts(context);
+
+  assert.equal(issues.length, 0);
+});
+
+test("missingPackageScripts uses command working-directory package.json when present", () => {
+  const context = createContext("Run `npm run typecheck` in the `build` folder.");
+  context.packageJson = { scripts: {} };
+  context.packageJsons = [
+    { path: "package.json", data: { scripts: {} } },
+    { path: "build/package.json", data: { scripts: { typecheck: "tsc -p ." } } },
   ];
 
   const issues = missingPackageScripts(context);

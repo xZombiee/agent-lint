@@ -1,5 +1,10 @@
 import path from "node:path";
-import type { PackageJsonData, PackageJsonRecord, ScanContext } from "../types.ts";
+import type {
+  PackageJsonData,
+  PackageJsonRecord,
+  ScanContext,
+  ScriptCommand,
+} from "../types.ts";
 
 export interface PackageJsonMatch {
   path: string;
@@ -47,4 +52,24 @@ export function findNearestPackageJson(
     path: "package.json",
     data: context.packageJson,
   };
+}
+
+export function findPackageJsonForCommand(
+  context: ScanContext,
+  sourceFile: string,
+  command: ScriptCommand,
+): PackageJsonMatch | null {
+  if (!command.workingDirectory) {
+    return findNearestPackageJson(context, sourceFile);
+  }
+
+  const normalizedDirectory = command.workingDirectory.replace(/^\/+/u, "").replace(/\/+$/u, "");
+  const exactPackageJsonPath = path.posix.join(normalizedDirectory, "package.json");
+  const exactMatch = context.packageJsons.find((packageJson) => packageJson.path === exactPackageJsonPath);
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  return findNearestPackageJson(context, sourceFile);
 }
