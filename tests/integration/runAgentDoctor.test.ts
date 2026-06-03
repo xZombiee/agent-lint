@@ -36,8 +36,8 @@ test("runAgentLint reports stale instructions and CI failure for the stale fixtu
   const projectRoot = await copyFixture("stale-repo");
   const result = await runAgentLint({ projectRoot, ci: true });
 
-  assert.equal(result.report.summary.errorCount, 1);
-  assert.equal(result.report.summary.warningCount, 4);
+  assert.equal(result.report.summary.errorCount, 2);
+  assert.equal(result.report.summary.warningCount, 3);
   assert.equal(result.report.summary.issueCount, 5);
   assert.equal(result.exitCode, 1);
 });

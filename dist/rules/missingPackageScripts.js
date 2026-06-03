@@ -24,7 +24,7 @@ export function missingPackageScripts(context) {
             issues.push({
                 id: `missing-script:${instructionFile.path}:${command.line}:${command.packageManager}:${command.scriptName}`,
                 rule: "missingPackageScripts",
-                severity: "warning",
+                severity: "error",
                 sourceFile: instructionFile.path,
                 line: command.line,
                 message: "Missing package script",

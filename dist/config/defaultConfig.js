@@ -26,7 +26,7 @@ export const defaultConfig = {
     },
     severity: {
         brokenFileReferences: "error",
-        missingPackageScripts: "warning",
+        missingPackageScripts: "error",
         toolMismatch: "warning",
         explicitContradictions: "warning",
         packageManagerMismatch: "warning",

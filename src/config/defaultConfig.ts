@@ -28,7 +28,7 @@ export const defaultConfig: ResolvedAgentLintConfig = {
   },
   severity: {
     brokenFileReferences: "error",
-    missingPackageScripts: "warning",
+    missingPackageScripts: "error",
     toolMismatch: "warning",
     explicitContradictions: "warning",
     packageManagerMismatch: "warning",

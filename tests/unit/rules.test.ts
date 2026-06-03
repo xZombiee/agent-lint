@@ -108,11 +108,11 @@ test("brokenFileReferences emits an error and close path suggestion", () => {
   assert.equal(issues[0]?.suggestions?.[0], "src/lib/http.ts");
 });
 
-test("missingPackageScripts emits a warning for missing scripts", () => {
+test("missingPackageScripts emits an error for missing scripts", () => {
   const issues = missingPackageScripts(createContext("Run `npm test` before pushing."));
 
   assert.equal(issues.length, 1);
-  assert.equal(issues[0]?.severity, "warning");
+  assert.equal(issues[0]?.severity, "error");
   assert.match(issues[0]?.evidence.repoFact ?? "", /no "test" script/u);
 });
 
