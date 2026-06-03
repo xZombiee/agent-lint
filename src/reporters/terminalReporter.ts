@@ -12,6 +12,9 @@ const RULE_TITLES: Record<RuleName, string> = {
   missingPackageScripts: "Missing package script",
   toolMismatch: "Tool mismatch",
   explicitContradictions: "Explicit contradiction",
+  packageManagerMismatch: "Package manager mismatch",
+  runtimeMismatch: "Runtime mismatch",
+  ciReferenceMismatch: "CI reference mismatch",
 };
 
 function formatCount(label: string, value: number): string {

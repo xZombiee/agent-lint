@@ -3,7 +3,11 @@ import { readFile } from "node:fs/promises";
 import { extractCommands } from "../parsers/extractCommands.ts";
 import { extractContradictionSignals } from "../parsers/extractContradictionSignals.ts";
 import { extractFilePaths } from "../parsers/extractFilePaths.ts";
+import { extractCiMentions } from "../parsers/extractCiMentions.ts";
+import { extractPackageManagerMentions } from "../parsers/extractPackageManagerMentions.ts";
+import { extractRuntimeMentions } from "../parsers/extractRuntimeMentions.ts";
 import { extractToolMentions } from "../parsers/extractToolMentions.ts";
+import { buildRepoFacts } from "./buildRepoFacts.ts";
 import { findInstructionFiles } from "./findInstructionFiles.ts";
 import { listRepoFiles } from "./listRepoFiles.ts";
 import { listTrackedPaths, readGitIgnoreRules } from "./readGitIgnoreRules.ts";
@@ -38,6 +42,9 @@ async function readInstructionFiles(
         content,
         fileReferences: extractFilePaths(content),
         commands: extractCommands(content),
+        packageManagerMentions: extractPackageManagerMentions(content),
+        runtimeMentions: extractRuntimeMentions(content),
+        ciMentions: extractCiMentions(content),
         toolMentions: extractToolMentions(content),
         contradictionSignals: extractContradictionSignals(content),
       };
@@ -55,6 +62,7 @@ export async function buildScanContext(
   const gitIgnoreRules = await readGitIgnoreRules(projectRoot, repoFiles);
   const trackedPaths = await listTrackedPaths(projectRoot);
   const packageJson = await readPackageJson(projectRoot);
+  const repoFacts = await buildRepoFacts(projectRoot, repoFiles, packageJson);
   const instructionFiles = await readInstructionFiles(projectRoot, instructionPaths);
 
   return {
@@ -65,6 +73,7 @@ export async function buildScanContext(
     gitIgnoreRules,
     trackedPaths,
     packageJson,
+    repoFacts,
     instructionFiles,
   };
 }

@@ -6,7 +6,10 @@ export type RuleName =
   | "brokenFileReferences"
   | "missingPackageScripts"
   | "toolMismatch"
-  | "explicitContradictions";
+  | "explicitContradictions"
+  | "packageManagerMismatch"
+  | "runtimeMismatch"
+  | "ciReferenceMismatch";
 
 export type OutputMode = "terminal" | "json" | "codex";
 
@@ -61,6 +64,8 @@ export interface PackageJsonData {
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  engines?: Record<string, string>;
+  packageManager?: string;
 }
 
 export interface FileReference {
@@ -91,6 +96,33 @@ export interface ScriptCommand {
   explicitRun: boolean;
 }
 
+export interface PackageManagerMention {
+  packageManager: PackageManager;
+  rawCommand: string;
+  line: number;
+  instructionText: string;
+}
+
+export type RuntimeName = "node" | "python" | "java";
+
+export interface RuntimeMention {
+  runtime: RuntimeName;
+  version: string;
+  line: number;
+  instructionText: string;
+}
+
+export type CiProvider = "github-actions" | "circleci" | "gitlab-ci" | "vercel" | "netlify";
+export type CiMentionKind = "provider" | "workflow" | "job";
+
+export interface CiMention {
+  provider: CiProvider;
+  kind: CiMentionKind;
+  name?: string;
+  line: number;
+  instructionText: string;
+}
+
 export type SupportedToolKey =
   | "jest"
   | "vitest"
@@ -99,6 +131,7 @@ export type SupportedToolKey =
   | "redux"
   | "zustand"
   | "eslint"
+  | "biome"
   | "prettier"
   | "tailwind"
   | "prisma"
@@ -159,8 +192,39 @@ export interface ParsedInstructionFile {
   content: string;
   fileReferences: FileReference[];
   commands: ScriptCommand[];
+  packageManagerMentions: PackageManagerMention[];
+  runtimeMentions: RuntimeMention[];
+  ciMentions: CiMention[];
   toolMentions: ToolMention[];
   contradictionSignals: ContradictionSignal[];
+}
+
+export interface ToolEvidence {
+  packages: string[];
+  configFiles: string[];
+}
+
+export interface RuntimeFact {
+  source: string;
+  version: string;
+}
+
+export interface CiFacts {
+  providers: CiProvider[];
+  githubWorkflowFiles: string[];
+  githubWorkflowNames: string[];
+  githubJobIds: string[];
+}
+
+export interface RepoFacts {
+  packageManagers: {
+    declared?: PackageManager;
+    lockfiles: Record<PackageManager, string[]>;
+    workspaceFiles: string[];
+  };
+  tools: Partial<Record<SupportedToolKey, ToolEvidence>>;
+  runtimes: Partial<Record<RuntimeName, RuntimeFact[]>>;
+  ci: CiFacts;
 }
 
 export interface ScanContext {
@@ -171,6 +235,7 @@ export interface ScanContext {
   gitIgnoreRules: GitIgnoreRule[];
   trackedPaths: string[];
   packageJson: PackageJsonData | null;
+  repoFacts: RepoFacts;
   instructionFiles: ParsedInstructionFile[];
 }
 

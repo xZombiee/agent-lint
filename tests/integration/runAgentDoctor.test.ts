@@ -42,6 +42,21 @@ test("runAgentLint reports stale instructions and CI failure for the stale fixtu
   assert.equal(result.exitCode, 1);
 });
 
+test("runAgentLint reports repository-fact mismatches", async () => {
+  const projectRoot = await copyFixture("fact-mismatch-repo");
+  const result = await runAgentLint({ projectRoot });
+
+  assert.equal(result.report.summary.errorCount, 0);
+  assert.equal(result.report.summary.warningCount, 6);
+
+  const rules = result.report.issues.map((issue) => issue.rule);
+  assert(rules.includes("toolMismatch"));
+  assert(rules.includes("explicitContradictions"));
+  assert(rules.includes("packageManagerMismatch"));
+  assert(rules.includes("runtimeMismatch"));
+  assert.equal(rules.filter((rule) => rule === "ciReferenceMismatch").length, 2);
+});
+
 test("git-ignored example paths in instructions do not produce broken-path noise", async () => {
   const projectRoot = await copyFixture("valid-repo");
   const agentsPath = path.join(projectRoot, "AGENTS.md");

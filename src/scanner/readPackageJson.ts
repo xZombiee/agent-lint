@@ -32,6 +32,14 @@ export async function readPackageJson(projectRoot: string): Promise<PackageJsonD
     result.devDependencies = packageJson.devDependencies;
   }
 
+  if (isRecordOfStrings(packageJson.engines)) {
+    result.engines = packageJson.engines;
+  }
+
+  if (typeof packageJson.packageManager === "string") {
+    result.packageManager = packageJson.packageManager;
+  }
+
   return result;
 }
 

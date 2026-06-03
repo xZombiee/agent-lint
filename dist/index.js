@@ -7,14 +7,20 @@ import { formatJsonReport } from "./reporters/jsonReporter.js";
 import { formatTerminalReport } from "./reporters/terminalReporter.js";
 import { writeArtifacts } from "./reporters/writeArtifacts.js";
 import { brokenFileReferences } from "./rules/brokenFileReferences.js";
+import { ciReferenceMismatch } from "./rules/ciReferenceMismatch.js";
 import { explicitContradictions } from "./rules/explicitContradictions.js";
 import { missingPackageScripts } from "./rules/missingPackageScripts.js";
+import { packageManagerMismatch } from "./rules/packageManagerMismatch.js";
+import { runtimeMismatch } from "./rules/runtimeMismatch.js";
 import { toolMismatch } from "./rules/toolMismatch.js";
 const RULE_IMPLEMENTATIONS = {
     brokenFileReferences,
     missingPackageScripts,
     toolMismatch,
     explicitContradictions,
+    packageManagerMismatch,
+    runtimeMismatch,
+    ciReferenceMismatch,
 };
 const SEVERITY_ORDER = {
     error: 0,

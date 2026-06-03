@@ -4,6 +4,9 @@ const RULE_TITLES = {
     missingPackageScripts: "Missing package script",
     toolMismatch: "Tool mismatch",
     explicitContradictions: "Explicit contradiction",
+    packageManagerMismatch: "Package manager mismatch",
+    runtimeMismatch: "Runtime mismatch",
+    ciReferenceMismatch: "CI reference mismatch",
 };
 function formatCount(label, value) {
     return `${value} ${label}${value === 1 ? "" : "s"}`;

@@ -4,6 +4,9 @@ const RULE_NAMES = [
     "missingPackageScripts",
     "toolMismatch",
     "explicitContradictions",
+    "packageManagerMismatch",
+    "runtimeMismatch",
+    "ciReferenceMismatch",
 ];
 const VALID_SEVERITIES = ["info", "warning", "error"];
 function isPlainObject(value) {

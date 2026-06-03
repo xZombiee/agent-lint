@@ -1,7 +1,7 @@
 export type IssueSeverity = "info" | "warning" | "error";
 export type ReferenceKind = "hard" | "example" | "policy" | "env" | "external";
 export type PathTargetKind = "file" | "dir" | "path";
-export type RuleName = "brokenFileReferences" | "missingPackageScripts" | "toolMismatch" | "explicitContradictions";
+export type RuleName = "brokenFileReferences" | "missingPackageScripts" | "toolMismatch" | "explicitContradictions" | "packageManagerMismatch" | "runtimeMismatch" | "ciReferenceMismatch";
 export type OutputMode = "terminal" | "json" | "codex";
 export type RuleToggleMap = Record<RuleName, boolean>;
 export type RuleSeverityMap = Record<RuleName, IssueSeverity>;
@@ -49,6 +49,8 @@ export interface PackageJsonData {
     scripts?: Record<string, string>;
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
+    engines?: Record<string, string>;
+    packageManager?: string;
 }
 export interface FileReference {
     path: string;
@@ -74,7 +76,29 @@ export interface ScriptCommand {
     instructionText: string;
     explicitRun: boolean;
 }
-export type SupportedToolKey = "jest" | "vitest" | "playwright" | "cypress" | "redux" | "zustand" | "eslint" | "prettier" | "tailwind" | "prisma" | "drizzle" | "nextjs" | "vite";
+export interface PackageManagerMention {
+    packageManager: PackageManager;
+    rawCommand: string;
+    line: number;
+    instructionText: string;
+}
+export type RuntimeName = "node" | "python" | "java";
+export interface RuntimeMention {
+    runtime: RuntimeName;
+    version: string;
+    line: number;
+    instructionText: string;
+}
+export type CiProvider = "github-actions" | "circleci" | "gitlab-ci" | "vercel" | "netlify";
+export type CiMentionKind = "provider" | "workflow" | "job";
+export interface CiMention {
+    provider: CiProvider;
+    kind: CiMentionKind;
+    name?: string;
+    line: number;
+    instructionText: string;
+}
+export type SupportedToolKey = "jest" | "vitest" | "playwright" | "cypress" | "redux" | "zustand" | "eslint" | "biome" | "prettier" | "tailwind" | "prisma" | "drizzle" | "nextjs" | "vite";
 export type ToolCategory = "testRunner" | "e2e" | "state" | "lint" | "format" | "styling" | "orm" | "app";
 export interface ToolDefinition {
     key: SupportedToolKey;
@@ -112,8 +136,35 @@ export interface ParsedInstructionFile {
     content: string;
     fileReferences: FileReference[];
     commands: ScriptCommand[];
+    packageManagerMentions: PackageManagerMention[];
+    runtimeMentions: RuntimeMention[];
+    ciMentions: CiMention[];
     toolMentions: ToolMention[];
     contradictionSignals: ContradictionSignal[];
+}
+export interface ToolEvidence {
+    packages: string[];
+    configFiles: string[];
+}
+export interface RuntimeFact {
+    source: string;
+    version: string;
+}
+export interface CiFacts {
+    providers: CiProvider[];
+    githubWorkflowFiles: string[];
+    githubWorkflowNames: string[];
+    githubJobIds: string[];
+}
+export interface RepoFacts {
+    packageManagers: {
+        declared?: PackageManager;
+        lockfiles: Record<PackageManager, string[]>;
+        workspaceFiles: string[];
+    };
+    tools: Partial<Record<SupportedToolKey, ToolEvidence>>;
+    runtimes: Partial<Record<RuntimeName, RuntimeFact[]>>;
+    ci: CiFacts;
 }
 export interface ScanContext {
     projectRoot: string;
@@ -123,6 +174,7 @@ export interface ScanContext {
     gitIgnoreRules: GitIgnoreRule[];
     trackedPaths: string[];
     packageJson: PackageJsonData | null;
+    repoFacts: RepoFacts;
     instructionFiles: ParsedInstructionFile[];
 }
 export interface RunOptions {

@@ -22,11 +22,17 @@ export const defaultConfig: ResolvedAgentLintConfig = {
     missingPackageScripts: true,
     toolMismatch: true,
     explicitContradictions: true,
+    packageManagerMismatch: true,
+    runtimeMismatch: true,
+    ciReferenceMismatch: true,
   },
   severity: {
     brokenFileReferences: "error",
     missingPackageScripts: "warning",
     toolMismatch: "warning",
     explicitContradictions: "warning",
+    packageManagerMismatch: "warning",
+    runtimeMismatch: "warning",
+    ciReferenceMismatch: "warning",
   },
 };

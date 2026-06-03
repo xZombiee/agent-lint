@@ -1,4 +1,4 @@
-import { getAlternativeTools, getInstalledPackagesForTool, getInstalledToolKeys, getToolDefinition, } from "../utils/supportedTools.js";
+import { getAlternativeTools, getToolDefinition, } from "../utils/supportedTools.js";
 function joinValues(values) {
     if (values.length <= 1) {
         return values[0] ?? "";
@@ -10,16 +10,19 @@ function joinValues(values) {
 }
 export function explicitContradictions(context) {
     const issues = [];
-    const installedTools = getInstalledToolKeys(context.packageJson);
+    const detectedTools = new Set(Object.keys(context.repoFacts.tools));
     const packageScripts = new Set(Object.keys(context.packageJson?.scripts ?? {}));
     for (const instructionFile of context.instructionFiles) {
         for (const signal of instructionFile.contradictionSignals) {
             if (signal.kind === "forbidTool") {
-                if (!installedTools.has(signal.tool)) {
+                if (!detectedTools.has(signal.tool)) {
                     continue;
                 }
                 const tool = getToolDefinition(signal.tool);
-                const installedPackages = getInstalledPackagesForTool(context.packageJson, signal.tool);
+                const evidence = [
+                    ...(context.repoFacts.tools[signal.tool]?.packages ?? []),
+                    ...(context.repoFacts.tools[signal.tool]?.configFiles ?? []),
+                ];
                 issues.push({
                     id: `explicit-contradiction:forbid-tool:${instructionFile.path}:${signal.line}:${signal.tool}`,
                     rule: "explicitContradictions",
@@ -29,18 +32,18 @@ export function explicitContradictions(context) {
                     message: "Explicit contradiction in instructions",
                     evidence: {
                         instructionText: signal.instructionText,
-                        repoFact: `${tool.name} is installed via ${joinValues(installedPackages)}.`,
+                        repoFact: `${tool.name} is detected via ${joinValues(evidence)}.`,
                     },
                     suggestion: `Either remove ${tool.name} from the repository or update the instruction.`,
                 });
                 continue;
             }
             if (signal.kind === "requireTool") {
-                if (installedTools.has(signal.tool)) {
+                if (detectedTools.has(signal.tool)) {
                     continue;
                 }
                 const tool = getToolDefinition(signal.tool);
-                const alternatives = getAlternativeTools(signal.tool).filter((candidate) => installedTools.has(candidate.key));
+                const alternatives = getAlternativeTools(signal.tool).filter((candidate) => detectedTools.has(candidate.key));
                 if (alternatives.length === 0) {
                     continue;
                 }

@@ -3,7 +3,11 @@ import { readFile } from "node:fs/promises";
 import { extractCommands } from "../parsers/extractCommands.js";
 import { extractContradictionSignals } from "../parsers/extractContradictionSignals.js";
 import { extractFilePaths } from "../parsers/extractFilePaths.js";
+import { extractCiMentions } from "../parsers/extractCiMentions.js";
+import { extractPackageManagerMentions } from "../parsers/extractPackageManagerMentions.js";
+import { extractRuntimeMentions } from "../parsers/extractRuntimeMentions.js";
 import { extractToolMentions } from "../parsers/extractToolMentions.js";
+import { buildRepoFacts } from "./buildRepoFacts.js";
 import { findInstructionFiles } from "./findInstructionFiles.js";
 import { listRepoFiles } from "./listRepoFiles.js";
 import { listTrackedPaths, readGitIgnoreRules } from "./readGitIgnoreRules.js";
@@ -27,6 +31,9 @@ async function readInstructionFiles(projectRoot, instructionPaths) {
             content,
             fileReferences: extractFilePaths(content),
             commands: extractCommands(content),
+            packageManagerMentions: extractPackageManagerMentions(content),
+            runtimeMentions: extractRuntimeMentions(content),
+            ciMentions: extractCiMentions(content),
             toolMentions: extractToolMentions(content),
             contradictionSignals: extractContradictionSignals(content),
         };
@@ -39,6 +46,7 @@ export async function buildScanContext(projectRoot, config) {
     const gitIgnoreRules = await readGitIgnoreRules(projectRoot, repoFiles);
     const trackedPaths = await listTrackedPaths(projectRoot);
     const packageJson = await readPackageJson(projectRoot);
+    const repoFacts = await buildRepoFacts(projectRoot, repoFiles, packageJson);
     const instructionFiles = await readInstructionFiles(projectRoot, instructionPaths);
     return {
         projectRoot,
@@ -48,6 +56,7 @@ export async function buildScanContext(projectRoot, config) {
         gitIgnoreRules,
         trackedPaths,
         packageJson,
+        repoFacts,
         instructionFiles,
     };
 }

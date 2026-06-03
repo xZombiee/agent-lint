@@ -314,14 +314,14 @@ function isReferenceFormatExample(line) {
     return (/\b(repo-root refs?|repository refs?|root-relative refs?|file refs?|path refs?|references?)\b.{0,48}\b(only|format|example)\b/iu.test(line) ||
         /\b(only|format|example)\b.{0,48}\b(repo-root refs?|repository refs?|root-relative refs?|file refs?|path refs?|references?)\b/iu.test(line));
 }
-function isCliOptionValueExample(line, tokenStart) {
+function isCliOptionValue(line, tokenStart) {
     if (tokenStart === undefined) {
         return false;
     }
     const beforeToken = line.slice(0, tokenStart);
     return /(?:^|\s)--[A-Za-z0-9][A-Za-z0-9-]*[=\s]+$/u.test(beforeToken);
 }
-function isConfigValueExample(line, candidatePath) {
+function isConfigValue(line, candidatePath) {
     return new RegExp(`^\\s*[A-Za-z0-9_.-]+\\s*:\\s*["']?${candidatePath.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}["']?\\s*,?\\s*$`, "u").test(line);
 }
 function classifyReferenceKind(candidatePath, line, section, tokenStart) {
@@ -335,8 +335,9 @@ function classifyReferenceKind(candidatePath, line, section, tokenStart) {
     }
     if (!hasHardRequirementCue(line) &&
         (isReferenceFormatExample(line) ||
-            isCliOptionValueExample(line, tokenStart) ||
-            isConfigValueExample(line, candidatePath))) {
+            (/\b(example|sample|for example|e\.g\.|placeholder)\b/iu.test(line) &&
+                (isCliOptionValue(line, tokenStart) ||
+                    isConfigValue(line, candidatePath))))) {
         return "example";
     }
     return classifyReferenceContext(line, section);

@@ -1,5 +1,5 @@
-import { getAlternativeTools, getInstalledToolKeys, getToolDefinition } from "../utils/supportedTools.ts";
-import type { AgentLintIssue, ScanContext } from "../types.ts";
+import { getAlternativeTools, getToolDefinition } from "../utils/supportedTools.ts";
+import type { AgentLintIssue, ScanContext, SupportedToolKey } from "../types.ts";
 
 function joinToolNames(toolNames: string[]): string {
   if (toolNames.length <= 1) {
@@ -14,17 +14,17 @@ function joinToolNames(toolNames: string[]): string {
 }
 
 export function toolMismatch(context: ScanContext): AgentLintIssue[] {
-  const installedTools = getInstalledToolKeys(context.packageJson);
+  const detectedTools = new Set(Object.keys(context.repoFacts.tools) as SupportedToolKey[]);
   const issues: AgentLintIssue[] = [];
 
   for (const instructionFile of context.instructionFiles) {
     for (const mention of instructionFile.toolMentions) {
-      if (mention.stance !== "use" || installedTools.has(mention.tool)) {
+      if (mention.stance !== "use" || detectedTools.has(mention.tool)) {
         continue;
       }
 
       const alternatives = getAlternativeTools(mention.tool).filter((tool) =>
-        installedTools.has(tool.key),
+        detectedTools.has(tool.key),
       );
 
       if (alternatives.length === 0) {
@@ -33,6 +33,10 @@ export function toolMismatch(context: ScanContext): AgentLintIssue[] {
 
       const expectedTool = getToolDefinition(mention.tool);
       const alternativeNames = alternatives.map((tool) => tool.name);
+      const alternativeEvidence = alternatives.flatMap((tool) => [
+        ...(context.repoFacts.tools[tool.key]?.packages ?? []),
+        ...(context.repoFacts.tools[tool.key]?.configFiles ?? []),
+      ]);
 
       issues.push({
         id: `tool-mismatch:${instructionFile.path}:${mention.line}:${mention.tool}`,
@@ -43,7 +47,7 @@ export function toolMismatch(context: ScanContext): AgentLintIssue[] {
         message: "Tool mismatch",
         evidence: {
           instructionText: mention.instructionText,
-          repoFact: `${expectedTool.name} is not installed, but ${joinToolNames(alternativeNames)} ${alternativeNames.length === 1 ? "is" : "are"} installed.`,
+          repoFact: `${expectedTool.name} was not detected, but ${joinToolNames(alternativeNames)} ${alternativeNames.length === 1 ? "was" : "were"} detected via ${joinToolNames(alternativeEvidence)}.`,
         },
         suggestion: `Update the instruction to match ${joinToolNames(alternativeNames)} or install ${expectedTool.name}.`,
         suggestions: alternativeNames,

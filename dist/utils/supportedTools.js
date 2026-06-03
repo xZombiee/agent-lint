@@ -42,6 +42,12 @@ export const SUPPORTED_TOOLS = [
         category: "lint",
     },
     {
+        key: "biome",
+        name: "Biome",
+        packages: ["@biomejs/biome"],
+        category: "lint",
+    },
+    {
         key: "prettier",
         name: "Prettier",
         packages: ["prettier"],

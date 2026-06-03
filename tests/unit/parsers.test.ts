@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { extractCiMentions } from "../../src/parsers/extractCiMentions.ts";
 import { extractCommands } from "../../src/parsers/extractCommands.ts";
 import { extractFilePaths } from "../../src/parsers/extractFilePaths.ts";
+import { extractPackageManagerMentions } from "../../src/parsers/extractPackageManagerMentions.ts";
+import { extractRuntimeMentions } from "../../src/parsers/extractRuntimeMentions.ts";
 import { extractToolMentions } from "../../src/parsers/extractToolMentions.ts";
 
 test("extractFilePaths returns only likely repository paths", () => {
@@ -40,19 +43,21 @@ Source docs stay under \`docs/**\` and plugin code under \`extensions/*/src/**\`
   assert(references.every((reference) => reference.kind === "hard"));
 });
 
-test("extractFilePaths classifies reference-format and CLI option examples as examples", () => {
+test("extractFilePaths classifies reference-format examples as examples", () => {
   const references = extractFilePaths(`
 Replies: repo-root refs only: \`extensions/telegram/src/index.ts:80\`. No absolute paths, no \`~/\`.
 openclaw agents set-identity --agent main --avatar avatars/openclaw.png
 avatar: "avatars/openclaw.png",
+Example command: openclaw agents set-identity --avatar avatars/sample.png
 `);
 
   assert.deepStrictEqual(
     references.map((reference) => [reference.path, reference.kind]),
     [
       ["extensions/telegram/src/index.ts", "example"],
-      ["avatars/openclaw.png", "example"],
-      ["avatars/openclaw.png", "example"],
+      ["avatars/openclaw.png", "hard"],
+      ["avatars/openclaw.png", "hard"],
+      ["avatars/sample.png", "example"],
     ],
   );
 });
@@ -126,6 +131,40 @@ Root/plugin npm packages ship shrinkwrap, but this prose should not require a "p
   assert.deepStrictEqual(
     commands.map((command) => `${command.packageManager}:${command.scriptName}`),
     ["npm:test", "npm:lint", "pnpm:build"],
+  );
+});
+
+test("extractPackageManagerMentions detects install and script commands", () => {
+  const mentions = extractPackageManagerMentions(`
+Run \`npm install\`, then pnpm run build.
+This package mentions npm but is not a command.
+`);
+
+  assert.deepStrictEqual(
+    mentions.map((mention) => `${mention.packageManager}:${mention.rawCommand}`),
+    ["npm:npm install", "pnpm:pnpm run build"],
+  );
+});
+
+test("extractRuntimeMentions detects concrete runtime versions", () => {
+  const mentions = extractRuntimeMentions(`
+Requires Node >=20.10.0.
+Python 3.11 is used by scripts.
+Java version 17 is required.
+`);
+
+  assert.deepStrictEqual(
+    mentions.map((mention) => `${mention.runtime}:${mention.version}`),
+    ["node:>=20.10.0", "python:3.11", "java:17"],
+  );
+});
+
+test("extractCiMentions detects concrete GitHub Actions names", () => {
+  const mentions = extractCiMentions("GitHub Actions workflow `ci` must pass job `test`.");
+
+  assert.deepStrictEqual(
+    mentions.map((mention) => `${mention.provider}:${mention.kind}:${mention.name ?? ""}`),
+    ["github-actions:provider:", "github-actions:workflow:ci", "github-actions:job:test"],
   );
 });
 

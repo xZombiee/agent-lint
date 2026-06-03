@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { defaultConfig } from "../../src/config/defaultConfig.ts";
+import { extractCiMentions } from "../../src/parsers/extractCiMentions.ts";
 import { extractCommands } from "../../src/parsers/extractCommands.ts";
 import { extractContradictionSignals } from "../../src/parsers/extractContradictionSignals.ts";
 import { extractFilePaths } from "../../src/parsers/extractFilePaths.ts";
+import { extractPackageManagerMentions } from "../../src/parsers/extractPackageManagerMentions.ts";
+import { extractRuntimeMentions } from "../../src/parsers/extractRuntimeMentions.ts";
 import { extractToolMentions } from "../../src/parsers/extractToolMentions.ts";
 import { brokenFileReferences } from "../../src/rules/brokenFileReferences.ts";
+import { ciReferenceMismatch } from "../../src/rules/ciReferenceMismatch.ts";
 import { explicitContradictions } from "../../src/rules/explicitContradictions.ts";
 import { missingPackageScripts } from "../../src/rules/missingPackageScripts.ts";
+import { packageManagerMismatch } from "../../src/rules/packageManagerMismatch.ts";
+import { runtimeMismatch } from "../../src/rules/runtimeMismatch.ts";
 import { toolMismatch } from "../../src/rules/toolMismatch.ts";
 import type { ParsedInstructionFile, ScanContext } from "../../src/types.ts";
 
@@ -17,6 +23,9 @@ function createInstructionFile(path: string, content: string): ParsedInstruction
     content,
     fileReferences: extractFilePaths(content),
     commands: extractCommands(content),
+    packageManagerMentions: extractPackageManagerMentions(content),
+    runtimeMentions: extractRuntimeMentions(content),
+    ciMentions: extractCiMentions(content),
     toolMentions: extractToolMentions(content),
     contradictionSignals: extractContradictionSignals(content),
   };
@@ -39,6 +48,34 @@ function createContext(instructionContent: string): ScanContext {
       },
       devDependencies: {
         vitest: "^1.0.0",
+      },
+    },
+    repoFacts: {
+      packageManagers: {
+        lockfiles: {
+          npm: [],
+          pnpm: [],
+          yarn: [],
+          bun: [],
+        },
+        workspaceFiles: [],
+      },
+      tools: {
+        redux: {
+          packages: ["@reduxjs/toolkit"],
+          configFiles: [],
+        },
+        vitest: {
+          packages: ["vitest"],
+          configFiles: [],
+        },
+      },
+      runtimes: {},
+      ci: {
+        providers: [],
+        githubWorkflowFiles: [],
+        githubWorkflowNames: [],
+        githubJobIds: [],
       },
     },
     instructionFiles: [createInstructionFile("AGENTS.md", instructionContent)],
@@ -71,6 +108,22 @@ test("toolMismatch emits a warning when an alternative tool is installed", () =>
   assert.match(issues[0]?.evidence.repoFact ?? "", /Vitest/u);
 });
 
+test("toolMismatch uses config files as tool evidence", () => {
+  const context = createContext("Use Jest for unit tests.");
+  context.packageJson = null;
+  context.repoFacts.tools = {
+    vitest: {
+      packages: [],
+      configFiles: ["vitest.config.ts"],
+    },
+  };
+
+  const issues = toolMismatch(context);
+
+  assert.equal(issues.length, 1);
+  assert.match(issues[0]?.evidence.repoFact ?? "", /vitest\.config\.ts/u);
+});
+
 test("explicitContradictions emits warnings only for supported high-confidence contradictions", () => {
   const issues = explicitContradictions(
     createContext(`
@@ -83,6 +136,57 @@ Vitest is already configured.
 
   assert.equal(issues.length, 3);
   assert(issues.every((issue) => issue.severity === "warning"));
+});
+
+test("packageManagerMismatch warns when instructions use the wrong package manager", () => {
+  const context = createContext("Run `npm install` and then `npm run test:unit`.");
+  context.repoFacts.packageManagers = {
+    declared: "pnpm",
+    lockfiles: {
+      npm: [],
+      pnpm: ["pnpm-lock.yaml"],
+      yarn: [],
+      bun: [],
+    },
+    workspaceFiles: ["pnpm-workspace.yaml"],
+  };
+
+  const issues = packageManagerMismatch(context);
+
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0]?.severity, "warning");
+  assert.match(issues[0]?.evidence.repoFact ?? "", /pnpm/u);
+});
+
+test("runtimeMismatch warns when instruction runtime version conflicts with repo metadata", () => {
+  const context = createContext("Requires Node 18 for local development.");
+  context.repoFacts.runtimes = {
+    node: [{ source: "package.json engines.node", version: ">=20.10.0" }],
+  };
+
+  const issues = runtimeMismatch(context);
+
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0]?.severity, "warning");
+  assert.match(issues[0]?.evidence.repoFact ?? "", /20\.10\.0/u);
+});
+
+test("ciReferenceMismatch validates concrete GitHub Actions workflow and job names", () => {
+  const context = createContext("GitHub Actions workflow `deploy` must pass job `publish`.");
+  context.repoFacts.ci = {
+    providers: ["github-actions"],
+    githubWorkflowFiles: [".github/workflows/ci.yml"],
+    githubWorkflowNames: ["ci"],
+    githubJobIds: ["test"],
+  };
+
+  const issues = ciReferenceMismatch(context);
+
+  assert.equal(issues.length, 2);
+  assert.deepStrictEqual(
+    issues.map((issue) => issue.message),
+    ["Missing GitHub Actions workflow", "Missing GitHub Actions job"],
+  );
 });
 
 test("brokenFileReferences ignores example ignored artifact paths in free text", () => {

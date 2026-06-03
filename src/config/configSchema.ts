@@ -11,6 +11,9 @@ const RULE_NAMES: RuleName[] = [
   "missingPackageScripts",
   "toolMismatch",
   "explicitContradictions",
+  "packageManagerMismatch",
+  "runtimeMismatch",
+  "ciReferenceMismatch",
 ];
 
 const VALID_SEVERITIES: IssueSeverity[] = ["info", "warning", "error"];

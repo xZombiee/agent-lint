@@ -453,7 +453,7 @@ function isReferenceFormatExample(line: string): boolean {
   );
 }
 
-function isCliOptionValueExample(line: string, tokenStart?: number): boolean {
+function isCliOptionValue(line: string, tokenStart?: number): boolean {
   if (tokenStart === undefined) {
     return false;
   }
@@ -463,7 +463,7 @@ function isCliOptionValueExample(line: string, tokenStart?: number): boolean {
   return /(?:^|\s)--[A-Za-z0-9][A-Za-z0-9-]*[=\s]+$/u.test(beforeToken);
 }
 
-function isConfigValueExample(line: string, candidatePath: string): boolean {
+function isConfigValue(line: string, candidatePath: string): boolean {
   return new RegExp(
     `^\\s*[A-Za-z0-9_.-]+\\s*:\\s*["']?${candidatePath.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}["']?\\s*,?\\s*$`,
     "u",
@@ -491,8 +491,9 @@ function classifyReferenceKind(
   if (
     !hasHardRequirementCue(line) &&
     (isReferenceFormatExample(line) ||
-      isCliOptionValueExample(line, tokenStart) ||
-      isConfigValueExample(line, candidatePath))
+      (/\b(example|sample|for example|e\.g\.|placeholder)\b/iu.test(line) &&
+        (isCliOptionValue(line, tokenStart) ||
+          isConfigValue(line, candidatePath))))
   ) {
     return "example";
   }

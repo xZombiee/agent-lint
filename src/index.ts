@@ -7,8 +7,11 @@ import { formatJsonReport } from "./reporters/jsonReporter.ts";
 import { formatTerminalReport } from "./reporters/terminalReporter.ts";
 import { writeArtifacts } from "./reporters/writeArtifacts.ts";
 import { brokenFileReferences } from "./rules/brokenFileReferences.ts";
+import { ciReferenceMismatch } from "./rules/ciReferenceMismatch.ts";
 import { explicitContradictions } from "./rules/explicitContradictions.ts";
 import { missingPackageScripts } from "./rules/missingPackageScripts.ts";
+import { packageManagerMismatch } from "./rules/packageManagerMismatch.ts";
+import { runtimeMismatch } from "./rules/runtimeMismatch.ts";
 import { toolMismatch } from "./rules/toolMismatch.ts";
 import type {
   AgentLintIssue,
@@ -27,6 +30,9 @@ const RULE_IMPLEMENTATIONS: Record<RuleName, RuleImplementation> = {
   missingPackageScripts,
   toolMismatch,
   explicitContradictions,
+  packageManagerMismatch,
+  runtimeMismatch,
+  ciReferenceMismatch,
 };
 
 const SEVERITY_ORDER: Record<IssueSeverity, number> = {
