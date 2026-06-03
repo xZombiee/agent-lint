@@ -11,7 +11,7 @@ export function classifyReferenceContext(line, section) {
     if (/\b(such as|for example|e\.g\.|for instance|or another|one of)\b/u.test(context)) {
         return "example";
     }
-    if (/\b(runtime|ci|machine-specific|symlink|generated at runtime|created during|depends on environment|local environment|environment variables?|env vars?|config option|config shape|local-only|git\/info\/exclude)\b/u.test(context)) {
+    if (/\b(runtime|ci|machine-specific|symlink|generated at runtime|created during|depends on environment|local environment|environment variables?|env vars?|config option|config shape|local-only|git\/info\/exclude|global storage|event stream|persistence|persisted|generated files?)\b/u.test(context)) {
         return "env";
     }
     return "hard";

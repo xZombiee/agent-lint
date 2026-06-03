@@ -11,7 +11,7 @@ import { buildRepoFacts } from "./buildRepoFacts.js";
 import { findInstructionFiles } from "./findInstructionFiles.js";
 import { listRepoFiles } from "./listRepoFiles.js";
 import { listTrackedPaths, readGitIgnoreRules } from "./readGitIgnoreRules.js";
-import { readPackageJson } from "./readPackageJson.js";
+import { readPackageJson, readPackageJsonRecords } from "./readPackageJson.js";
 function collectRepoDirectories(repoFiles) {
     const directories = new Set();
     for (const repoFile of repoFiles) {
@@ -46,6 +46,7 @@ export async function buildScanContext(projectRoot, config) {
     const gitIgnoreRules = await readGitIgnoreRules(projectRoot, repoFiles);
     const trackedPaths = await listTrackedPaths(projectRoot);
     const packageJson = await readPackageJson(projectRoot);
+    const packageJsons = await readPackageJsonRecords(projectRoot, repoFiles);
     const repoFacts = await buildRepoFacts(projectRoot, repoFiles, packageJson);
     const instructionFiles = await readInstructionFiles(projectRoot, instructionPaths);
     return {
@@ -56,6 +57,7 @@ export async function buildScanContext(projectRoot, config) {
         gitIgnoreRules,
         trackedPaths,
         packageJson,
+        packageJsons,
         repoFacts,
         instructionFiles,
     };

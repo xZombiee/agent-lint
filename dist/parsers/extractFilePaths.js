@@ -34,6 +34,36 @@ const WEAK_CODE_ROOT_SEGMENTS = new Set([
 ]);
 const EXTERNAL_REFERENCE_CONTEXT = /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|separate repo|cloned locally as)\b/iu;
 const EXTERNAL_LOCAL_PATH_CONTEXT = /\bin (?:the )?(?:separate )?publish repo\b|\bin (?:the )?separate [^.,;:]+ repo\b/iu;
+const COMMON_ABBREVIATION_TOKENS = new Set(["e.g", "i.e", "vs."]);
+const KNOWN_FILE_EXTENSIONS = new Set([
+    "c",
+    "cc",
+    "cpp",
+    "cs",
+    "css",
+    "d.ts",
+    "go",
+    "h",
+    "html",
+    "java",
+    "js",
+    "json",
+    "jsonl",
+    "jsx",
+    "md",
+    "mdx",
+    "mjs",
+    "png",
+    "py",
+    "rs",
+    "scss",
+    "sh",
+    "ts",
+    "tsx",
+    "toml",
+    "yaml",
+    "yml",
+]);
 function sanitizeToken(token) {
     let value = token.trim();
     const wrapperPairs = [
@@ -50,6 +80,8 @@ function sanitizeToken(token) {
         changed = false;
         value = value.replace(/[.,;:!?]+(?=\*+$)/u, "");
         value = value.replace(/[.,;:!?]+$/u, "");
+        value = value.replace(/^\*+(?=[`"([{<])/u, "");
+        value = value.replace(/(?<=[`"')\]}>])\*+$/u, "");
         value = value.replace(/^[`"'([{]+/u, "");
         value = value.replace(/[`"')\]}]+$/u, "");
         if (/^\*+[A-Za-z]/u.test(value)) {
@@ -125,15 +157,25 @@ function isLiteralExtensionToken(candidatePath) {
     return /^\.[A-Za-z]{1,8}$/u.test(candidatePath);
 }
 function isEllipsisToken(candidatePath) {
-    return /^\.{2,}$/u.test(candidatePath);
+    return /^\.{3,}$/u.test(candidatePath) || /(^|\/)\.{3,}(\/|$)/u.test(candidatePath);
 }
 function isConfigKeyToken(candidatePath) {
     if (candidatePath.includes("/") || KNOWN_ROOT_FILES.has(candidatePath)) {
         return false;
     }
     const segments = candidatePath.split(".");
-    return (segments.length >= 3 &&
+    const extension = segments.slice(1).join(".").toLowerCase();
+    if (KNOWN_FILE_EXTENSIONS.has(extension) || KNOWN_FILE_EXTENSIONS.has(segments.at(-1)?.toLowerCase() ?? "")) {
+        return false;
+    }
+    return (segments.length >= 2 &&
         segments.every((segment) => /^[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?$/u.test(segment)));
+}
+function isCommonAbbreviationToken(candidatePath) {
+    return COMMON_ABBREVIATION_TOKENS.has(candidatePath.toLowerCase());
+}
+function isRuntimeAdjectiveToken(candidatePath) {
+    return /^(?:Node\.js|VS\.Code)(?:-[A-Za-z]+)?$/u.test(candidatePath);
 }
 function isAllowedBareDotfile(candidatePath) {
     return new Set([
@@ -155,6 +197,12 @@ function isBareConfigExample(candidatePath, line) {
     }
     return /\b(configure|configuration|config|settings|defaults?|env|environment)\b/iu.test(line);
 }
+function isRuntimeGeneratedArtifact(candidatePath, line) {
+    if (candidatePath.includes("/") || !hasFileExtension(candidatePath)) {
+        return false;
+    }
+    return /\b(generated|runtime|persistence|persisted|stores?|stored|storage|cache|event stream|events?|sample|fixtures?|global storage|created|written)\b/iu.test(line);
+}
 function isTemplateVersionToken(candidatePath) {
     return /^v?[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9-]*)+(?:-[A-Za-z0-9.-]+)?$/u.test(candidatePath);
 }
@@ -168,6 +216,13 @@ function isVersionLikeToken(candidatePath) {
     return (isTemplateVersionToken(candidatePath) ||
         isNumericVersionToken(candidatePath) ||
         isModelVersionToken(candidatePath));
+}
+function isMarkdownInventoryLine(line) {
+    return (/^\s*[-*]\s+(?:\*\*)?`[^`]+`(?:\*\*)?\s*[:—-]/u.test(line) ||
+        /^\s*\|[^|\n]*`[^`]+`[^|\n]*\|/u.test(line));
+}
+function isDirectoryInventoryReference(candidatePath, line) {
+    return candidatePath.endsWith("/") && isMarkdownInventoryLine(line);
 }
 function isPackageImportSpecifier(candidatePath) {
     if (hasRelativePrefix(candidatePath) ||
@@ -244,6 +299,8 @@ function hasStrongLocalSignal(candidatePath) {
         return false;
     }
     if (isEllipsisToken(candidatePath) ||
+        isCommonAbbreviationToken(candidatePath) ||
+        isRuntimeAdjectiveToken(candidatePath) ||
         hasPlaceholderSyntax(candidatePath) ||
         isLiteralExtensionToken(candidatePath) ||
         isConfigKeyToken(candidatePath) ||
@@ -333,8 +390,12 @@ function classifyReferenceKind(candidatePath, line, section, tokenStart) {
     if (isExternalReferenceCandidate(candidatePath, line)) {
         return "external";
     }
+    if (!hasHardRequirementCue(line) && isRuntimeGeneratedArtifact(candidatePath, line)) {
+        return "env";
+    }
     if (!hasHardRequirementCue(line) &&
         (isReferenceFormatExample(line) ||
+            isDirectoryInventoryReference(candidatePath, line) ||
             (/\b(example|sample|for example|e\.g\.|placeholder)\b/iu.test(line) &&
                 (isCliOptionValue(line, tokenStart) ||
                     isConfigValue(line, candidatePath))))) {

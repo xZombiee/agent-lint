@@ -68,6 +68,11 @@ export interface PackageJsonData {
   packageManager?: string;
 }
 
+export interface PackageJsonRecord {
+  path: string;
+  data: PackageJsonData;
+}
+
 export interface FileReference {
   path: string;
   rawPath: string;
@@ -235,6 +240,7 @@ export interface ScanContext {
   gitIgnoreRules: GitIgnoreRule[];
   trackedPaths: string[];
   packageJson: PackageJsonData | null;
+  packageJsons: PackageJsonRecord[];
   repoFacts: RepoFacts;
   instructionFiles: ParsedInstructionFile[];
 }

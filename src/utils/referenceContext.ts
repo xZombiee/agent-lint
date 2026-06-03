@@ -29,7 +29,7 @@ export function classifyReferenceContext(
   }
 
   if (
-    /\b(runtime|ci|machine-specific|symlink|generated at runtime|created during|depends on environment|local environment|environment variables?|env vars?|config option|config shape|local-only|git\/info\/exclude)\b/u.test(
+    /\b(runtime|ci|machine-specific|symlink|generated at runtime|created during|depends on environment|local environment|environment variables?|env vars?|config option|config shape|local-only|git\/info\/exclude|global storage|event stream|persistence|persisted|generated files?)\b/u.test(
       context,
     )
   ) {

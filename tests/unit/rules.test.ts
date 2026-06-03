@@ -50,6 +50,22 @@ function createContext(instructionContent: string): ScanContext {
         vitest: "^1.0.0",
       },
     },
+    packageJsons: [
+      {
+        path: "package.json",
+        data: {
+          scripts: {
+            "test:unit": "node --test",
+          },
+          dependencies: {
+            "@reduxjs/toolkit": "^2.0.0",
+          },
+          devDependencies: {
+            vitest: "^1.0.0",
+          },
+        },
+      },
+    ],
     repoFacts: {
       packageManagers: {
         lockfiles: {
@@ -134,7 +150,7 @@ Vitest is already configured.
 `),
   );
 
-  assert.equal(issues.length, 3);
+  assert.equal(issues.length, 2);
   assert(issues.every((issue) => issue.severity === "warning"));
 });
 
@@ -252,6 +268,48 @@ test("brokenFileReferences resolves directory references without trailing slash 
   const context = createContext("Scoped guides live in `src/` and `src/lib/`.");
 
   const issues = brokenFileReferences(context);
+
+  assert.equal(issues.length, 0);
+});
+
+test("brokenFileReferences resolves package-root paths from nested .github instructions", () => {
+  const context = createContext(`
+- **\`src/extension/\`**: Main extension implementation.
+- **\`script/simulate.sh\`**: Test runner.
+`);
+  context.instructionFiles = [createInstructionFile("extensions/copilot/.github/copilot-instructions.md", `
+- **\`src/extension/\`**: Main extension implementation.
+- **\`script/simulate.sh\`**: Test runner.
+`)];
+  context.repoFiles.push(
+    "extensions/copilot/src/extension/index.ts",
+    "extensions/copilot/script/simulate.sh",
+  );
+  context.repoDirectories.push(
+    "extensions",
+    "extensions/copilot",
+    "extensions/copilot/src",
+    "extensions/copilot/src/extension",
+    "extensions/copilot/script",
+  );
+
+  const issues = brokenFileReferences(context);
+
+  assert.equal(issues.length, 0);
+});
+
+test("missingPackageScripts uses the nearest package.json for nested instructions", () => {
+  const context = createContext("Run `npm run test:unit` before pushing.");
+  context.instructionFiles = [
+    createInstructionFile("extensions/copilot/.github/copilot-instructions.md", "Run `npm run test:unit` before pushing."),
+  ];
+  context.packageJson = { scripts: {} };
+  context.packageJsons = [
+    { path: "package.json", data: { scripts: {} } },
+    { path: "extensions/copilot/package.json", data: { scripts: { "test:unit": "node test.js" } } },
+  ];
+
+  const issues = missingPackageScripts(context);
 
   assert.equal(issues.length, 0);
 });

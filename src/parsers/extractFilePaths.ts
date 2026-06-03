@@ -44,6 +44,36 @@ const EXTERNAL_REFERENCE_CONTEXT =
   /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|separate repo|cloned locally as)\b/iu;
 const EXTERNAL_LOCAL_PATH_CONTEXT =
   /\bin (?:the )?(?:separate )?publish repo\b|\bin (?:the )?separate [^.,;:]+ repo\b/iu;
+const COMMON_ABBREVIATION_TOKENS = new Set(["e.g", "i.e", "vs."]);
+const KNOWN_FILE_EXTENSIONS = new Set([
+  "c",
+  "cc",
+  "cpp",
+  "cs",
+  "css",
+  "d.ts",
+  "go",
+  "h",
+  "html",
+  "java",
+  "js",
+  "json",
+  "jsonl",
+  "jsx",
+  "md",
+  "mdx",
+  "mjs",
+  "png",
+  "py",
+  "rs",
+  "scss",
+  "sh",
+  "ts",
+  "tsx",
+  "toml",
+  "yaml",
+  "yml",
+]);
 
 interface PathToken {
   raw: string;
@@ -68,6 +98,8 @@ function sanitizeToken(token: string): string {
     changed = false;
     value = value.replace(/[.,;:!?]+(?=\*+$)/u, "");
     value = value.replace(/[.,;:!?]+$/u, "");
+    value = value.replace(/^\*+(?=[`"([{<])/u, "");
+    value = value.replace(/(?<=[`"')\]}>])\*+$/u, "");
     value = value.replace(/^[`"'([{]+/u, "");
     value = value.replace(/[`"')\]}]+$/u, "");
 
@@ -172,7 +204,7 @@ function isLiteralExtensionToken(candidatePath: string): boolean {
 }
 
 function isEllipsisToken(candidatePath: string): boolean {
-  return /^\.{2,}$/u.test(candidatePath);
+  return /^\.{3,}$/u.test(candidatePath) || /(^|\/)\.{3,}(\/|$)/u.test(candidatePath);
 }
 
 function isConfigKeyToken(candidatePath: string): boolean {
@@ -181,11 +213,24 @@ function isConfigKeyToken(candidatePath: string): boolean {
   }
 
   const segments = candidatePath.split(".");
+  const extension = segments.slice(1).join(".").toLowerCase();
+
+  if (KNOWN_FILE_EXTENSIONS.has(extension) || KNOWN_FILE_EXTENSIONS.has(segments.at(-1)?.toLowerCase() ?? "")) {
+    return false;
+  }
 
   return (
-    segments.length >= 3 &&
+    segments.length >= 2 &&
     segments.every((segment) => /^[A-Za-z_$][A-Za-z0-9_$]*(?:\[\])?$/u.test(segment))
   );
+}
+
+function isCommonAbbreviationToken(candidatePath: string): boolean {
+  return COMMON_ABBREVIATION_TOKENS.has(candidatePath.toLowerCase());
+}
+
+function isRuntimeAdjectiveToken(candidatePath: string): boolean {
+  return /^(?:Node\.js|VS\.Code)(?:-[A-Za-z]+)?$/u.test(candidatePath);
 }
 
 function isAllowedBareDotfile(candidatePath: string): boolean {
@@ -214,6 +259,16 @@ function isBareConfigExample(candidatePath: string, line: string): boolean {
   );
 }
 
+function isRuntimeGeneratedArtifact(candidatePath: string, line: string): boolean {
+  if (candidatePath.includes("/") || !hasFileExtension(candidatePath)) {
+    return false;
+  }
+
+  return /\b(generated|runtime|persistence|persisted|stores?|stored|storage|cache|event stream|events?|sample|fixtures?|global storage|created|written)\b/iu.test(
+    line,
+  );
+}
+
 function isTemplateVersionToken(candidatePath: string): boolean {
   return /^v?[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9-]*)+(?:-[A-Za-z0-9.-]+)?$/u.test(
     candidatePath,
@@ -236,6 +291,17 @@ function isVersionLikeToken(candidatePath: string): boolean {
     isNumericVersionToken(candidatePath) ||
     isModelVersionToken(candidatePath)
   );
+}
+
+function isMarkdownInventoryLine(line: string): boolean {
+  return (
+    /^\s*[-*]\s+(?:\*\*)?`[^`]+`(?:\*\*)?\s*[:—-]/u.test(line) ||
+    /^\s*\|[^|\n]*`[^`]+`[^|\n]*\|/u.test(line)
+  );
+}
+
+function isDirectoryInventoryReference(candidatePath: string, line: string): boolean {
+  return candidatePath.endsWith("/") && isMarkdownInventoryLine(line);
 }
 
 function isPackageImportSpecifier(candidatePath: string): boolean {
@@ -348,6 +414,8 @@ function hasStrongLocalSignal(candidatePath: string): boolean {
 
   if (
     isEllipsisToken(candidatePath) ||
+    isCommonAbbreviationToken(candidatePath) ||
+    isRuntimeAdjectiveToken(candidatePath) ||
     hasPlaceholderSyntax(candidatePath) ||
     isLiteralExtensionToken(candidatePath) ||
     isConfigKeyToken(candidatePath) ||
@@ -488,9 +556,14 @@ function classifyReferenceKind(
     return "external";
   }
 
+  if (!hasHardRequirementCue(line) && isRuntimeGeneratedArtifact(candidatePath, line)) {
+    return "env";
+  }
+
   if (
     !hasHardRequirementCue(line) &&
     (isReferenceFormatExample(line) ||
+      isDirectoryInventoryReference(candidatePath, line) ||
       (/\b(example|sample|for example|e\.g\.|placeholder)\b/iu.test(line) &&
         (isCliOptionValue(line, tokenStart) ||
           isConfigValue(line, candidatePath))))

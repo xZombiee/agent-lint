@@ -11,7 +11,6 @@ function joinValues(values) {
 export function explicitContradictions(context) {
     const issues = [];
     const detectedTools = new Set(Object.keys(context.repoFacts.tools));
-    const packageScripts = new Set(Object.keys(context.packageJson?.scripts ?? {}));
     for (const instructionFile of context.instructionFiles) {
         for (const signal of instructionFile.contradictionSignals) {
             if (signal.kind === "forbidTool") {
@@ -64,22 +63,7 @@ export function explicitContradictions(context) {
                 });
                 continue;
             }
-            if (context.packageJson === null || packageScripts.has(signal.scriptName)) {
-                continue;
-            }
-            issues.push({
-                id: `explicit-contradiction:command:${instructionFile.path}:${signal.line}:${signal.packageManager}:${signal.scriptName}`,
-                rule: "explicitContradictions",
-                severity: "warning",
-                sourceFile: instructionFile.path,
-                line: signal.line,
-                message: "Explicit contradiction in instructions",
-                evidence: {
-                    instructionText: signal.instructionText,
-                    repoFact: `package.json has no "${signal.scriptName}" script.`,
-                },
-                suggestion: `Add the "${signal.scriptName}" script or update the instruction.`,
-            });
+            continue;
         }
     }
     return issues;

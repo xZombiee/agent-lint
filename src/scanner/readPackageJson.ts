@@ -1,10 +1,17 @@
 import path from "node:path";
 import { readFile } from "node:fs/promises";
-import type { PackageJsonData } from "../types.ts";
+import type { PackageJsonData, PackageJsonRecord } from "../types.ts";
 import { pathExists } from "../utils/pathExists.ts";
 
 export async function readPackageJson(projectRoot: string): Promise<PackageJsonData | null> {
-  const packageJsonPath = path.join(projectRoot, "package.json");
+  return readPackageJsonAt(projectRoot, "package.json");
+}
+
+export async function readPackageJsonAt(
+  projectRoot: string,
+  relativePath: string,
+): Promise<PackageJsonData | null> {
+  const packageJsonPath = path.join(projectRoot, relativePath);
 
   if (!(await pathExists(packageJsonPath))) {
     return null;
@@ -41,6 +48,26 @@ export async function readPackageJson(projectRoot: string): Promise<PackageJsonD
   }
 
   return result;
+}
+
+export async function readPackageJsonRecords(
+  projectRoot: string,
+  repoFiles: string[],
+): Promise<PackageJsonRecord[]> {
+  const packageJsonPaths = repoFiles.filter((repoFile) =>
+    /(^|\/)package\.json$/u.test(repoFile),
+  );
+  const records: PackageJsonRecord[] = [];
+
+  for (const packageJsonPath of packageJsonPaths) {
+    const data = await readPackageJsonAt(projectRoot, packageJsonPath);
+
+    if (data) {
+      records.push({ path: packageJsonPath, data });
+    }
+  }
+
+  return records;
 }
 
 function isRecordOfStrings(value: unknown): value is Record<string, string> {

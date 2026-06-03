@@ -6,11 +6,34 @@ function normalizeRepoPath(candidatePath) {
     const normalized = path.posix.normalize(candidatePath.replace(/\\/gu, "/"));
     return normalized.replace(/^\/+/u, "").replace(/^\.\//u, "").replace(/\/+$/u, "");
 }
+function getPackageRootAnchor(sourceFile) {
+    const segments = sourceFile.split("/");
+    const githubIndex = segments.indexOf(".github");
+    if (githubIndex > 0) {
+        return segments.slice(0, githubIndex).join("/");
+    }
+    if (segments.length >= 2 &&
+        ["apps", "extensions", "packages"].includes(segments[0] ?? "")) {
+        return segments.slice(0, 2).join("/");
+    }
+    return null;
+}
+function addMonorepoContainerCandidates(candidates, rawPath) {
+    const trimmedPath = rawPath.replace(/^\.\/+/u, "").replace(/\/+$/u, "");
+    if (trimmedPath === "" || trimmedPath.includes("/")) {
+        return;
+    }
+    for (const container of ["apps", "extensions", "packages"]) {
+        candidates.add(normalizeRepoPath(path.posix.join(container, trimmedPath)));
+    }
+}
 function resolveReferenceCandidates(sourceFile, reference) {
     const instructionDirectory = path.posix.dirname(sourceFile);
     const rawPath = reference.rawPath;
+    const packageRootAnchor = getPackageRootAnchor(sourceFile);
     const candidates = new Set();
     candidates.add(normalizeRepoPath(reference.path));
+    addMonorepoContainerCandidates(candidates, rawPath);
     if (rawPath.startsWith("/") &&
         sourceFile.startsWith("docs/") &&
         !rawPath.includes("*") &&
@@ -25,6 +48,9 @@ function resolveReferenceCandidates(sourceFile, reference) {
         candidates.add(normalizeRepoPath(path.posix.join(instructionDirectory, rawPath)));
     }
     else if (instructionDirectory !== "." && instructionDirectory !== "") {
+        if (packageRootAnchor) {
+            candidates.add(normalizeRepoPath(path.posix.join(packageRootAnchor, rawPath)));
+        }
         candidates.add(normalizeRepoPath(path.posix.join(instructionDirectory, rawPath)));
     }
     return [...candidates].filter((candidate) => candidate !== "");

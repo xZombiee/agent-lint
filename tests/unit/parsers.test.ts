@@ -82,13 +82,43 @@ test("extractFilePaths cleans wrapper leftovers without dropping real paths", ()
 No deep internals (\`extensions/*/src/**\`, \`onboard.js\`).
 Run \`node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts\`.
 Do not treat \`...\`, \`openclaw/plugin-sdk/*\`, or **Discord/WhatsApp:** as paths.
+- **\`src/extension/\`**: Main extension implementation.
 `);
 
   assert.deepStrictEqual(
-    references.map((reference) => reference.path),
+    references.map((reference) => [reference.path, reference.kind]),
     [
-      "scripts/run-vitest.mjs",
-      "test/vitest/vitest.tui-pty.config.ts",
+      ["scripts/run-vitest.mjs", "hard"],
+      ["test/vitest/vitest.tui-pty.config.ts", "hard"],
+      ["src/extension/", "example"],
+    ],
+  );
+});
+
+test("extractFilePaths ignores API member expressions and prose abbreviations", () => {
+  const references = extractFilePaths(`
+Use console.log only in examples; prefer ILogService.
+for (let i = 0, n = str.length; i < 10; i++) {}
+The pipeline writes to state.groups and Promise.all resolves metadata.
+Trackpad pinch reports e.ctrlKey and Node.js-specific behavior.
+This setting table includes \`mcp.enabled\` and \`branchSupport.enabled\`.
+These docs mention e.g. and i.e. abbreviations.
+`);
+
+  assert.deepStrictEqual(references, []);
+});
+
+test("extractFilePaths treats runtime generated artifacts as environment assumptions", () => {
+  const references = extractFilePaths(`
+- \`events.jsonl\` — Ordered event stream.
+- Stores image data as files in extension global storage (\`copilot-cli-images/\`).
+`);
+
+  assert.deepStrictEqual(
+    references.map((reference) => [reference.path, reference.kind]),
+    [
+      ["events.jsonl", "env"],
+      ["copilot-cli-images/", "env"],
     ],
   );
 });

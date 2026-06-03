@@ -19,7 +19,6 @@ function joinValues(values: string[]): string {
 export function explicitContradictions(context: ScanContext): AgentLintIssue[] {
   const issues: AgentLintIssue[] = [];
   const detectedTools = new Set(Object.keys(context.repoFacts.tools) as SupportedToolKey[]);
-  const packageScripts = new Set(Object.keys(context.packageJson?.scripts ?? {}));
 
   for (const instructionFile of context.instructionFiles) {
     for (const signal of instructionFile.contradictionSignals) {
@@ -85,23 +84,7 @@ export function explicitContradictions(context: ScanContext): AgentLintIssue[] {
         continue;
       }
 
-      if (context.packageJson === null || packageScripts.has(signal.scriptName)) {
-        continue;
-      }
-
-      issues.push({
-        id: `explicit-contradiction:command:${instructionFile.path}:${signal.line}:${signal.packageManager}:${signal.scriptName}`,
-        rule: "explicitContradictions",
-        severity: "warning",
-        sourceFile: instructionFile.path,
-        line: signal.line,
-        message: "Explicit contradiction in instructions",
-        evidence: {
-          instructionText: signal.instructionText,
-          repoFact: `package.json has no "${signal.scriptName}" script.`,
-        },
-        suggestion: `Add the "${signal.scriptName}" script or update the instruction.`,
-      });
+      continue;
     }
   }
 

@@ -1,4 +1,5 @@
 import { findClosestMatches } from "../utils/pathSimilarity.js";
+import { findNearestPackageJson } from "../utils/packageJsonLookup.js";
 function buildCommandSuggestion(packageManager, suggestions) {
     if (suggestions.length === 0) {
         return "Add the missing script to package.json or update the instruction.";
@@ -8,12 +9,13 @@ function buildCommandSuggestion(packageManager, suggestions) {
     return `Use ${commandPrefix} ${suggestedScript} or update the instruction.`;
 }
 export function missingPackageScripts(context) {
-    const packageScripts = Object.keys(context.packageJson?.scripts ?? {});
-    if (context.packageJson === null) {
-        return [];
-    }
     const issues = [];
     for (const instructionFile of context.instructionFiles) {
+        const packageJson = findNearestPackageJson(context, instructionFile.path);
+        if (!packageJson) {
+            continue;
+        }
+        const packageScripts = Object.keys(packageJson.data.scripts ?? {});
         for (const command of instructionFile.commands) {
             if (packageScripts.includes(command.scriptName)) {
                 continue;
@@ -28,7 +30,7 @@ export function missingPackageScripts(context) {
                 message: "Missing package script",
                 evidence: {
                     instructionText: command.instructionText,
-                    repoFact: `package.json has no "${command.scriptName}" script.`,
+                    repoFact: `${packageJson.path} has no "${command.scriptName}" script.`,
                 },
                 suggestion: buildCommandSuggestion(command.packageManager, suggestions),
                 suggestions,

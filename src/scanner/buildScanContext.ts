@@ -11,7 +11,7 @@ import { buildRepoFacts } from "./buildRepoFacts.ts";
 import { findInstructionFiles } from "./findInstructionFiles.ts";
 import { listRepoFiles } from "./listRepoFiles.ts";
 import { listTrackedPaths, readGitIgnoreRules } from "./readGitIgnoreRules.ts";
-import { readPackageJson } from "./readPackageJson.ts";
+import { readPackageJson, readPackageJsonRecords } from "./readPackageJson.ts";
 import type { ParsedInstructionFile, ResolvedAgentLintConfig, ScanContext } from "../types.ts";
 
 function collectRepoDirectories(repoFiles: string[]): string[] {
@@ -62,6 +62,7 @@ export async function buildScanContext(
   const gitIgnoreRules = await readGitIgnoreRules(projectRoot, repoFiles);
   const trackedPaths = await listTrackedPaths(projectRoot);
   const packageJson = await readPackageJson(projectRoot);
+  const packageJsons = await readPackageJsonRecords(projectRoot, repoFiles);
   const repoFacts = await buildRepoFacts(projectRoot, repoFiles, packageJson);
   const instructionFiles = await readInstructionFiles(projectRoot, instructionPaths);
 
@@ -73,6 +74,7 @@ export async function buildScanContext(
     gitIgnoreRules,
     trackedPaths,
     packageJson,
+    packageJsons,
     repoFacts,
     instructionFiles,
   };

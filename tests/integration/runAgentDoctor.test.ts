@@ -37,8 +37,8 @@ test("runAgentLint reports stale instructions and CI failure for the stale fixtu
   const result = await runAgentLint({ projectRoot, ci: true });
 
   assert.equal(result.report.summary.errorCount, 1);
-  assert.equal(result.report.summary.warningCount, 5);
-  assert.equal(result.report.summary.issueCount, 6);
+  assert.equal(result.report.summary.warningCount, 4);
+  assert.equal(result.report.summary.issueCount, 5);
   assert.equal(result.exitCode, 1);
 });
 
@@ -149,7 +149,7 @@ test("json and codex outputs contain the documented structures", async () => {
     issues: Array<{ rule: string }>;
   };
 
-  assert.equal(jsonReport.summary.issueCount, 6);
+  assert.equal(jsonReport.summary.issueCount, 5);
   assert(jsonReport.issues.some((issue) => issue.rule === "brokenFileReferences"));
   assert.match(
     result.outputs.codex,
@@ -171,6 +171,6 @@ test("writeSummary creates report and summary artifacts", async () => {
   };
   const summaryMarkdown = await readFile(result.artifactPaths!.summaryPath, "utf8");
 
-  assert.equal(reportJson.summary.issueCount, 6);
+  assert.equal(reportJson.summary.issueCount, 5);
   assert.match(summaryMarkdown, /# Agent Lint Summary/u);
 });
