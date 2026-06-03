@@ -1,15 +1,40 @@
 function extractMajorVersion(value) {
     return /v?(?<major>\d+)/iu.exec(value.replace(/^[<>=~^\s]+/u, ""))?.groups?.major ?? null;
 }
+function extractComparator(value) {
+    return /^(?<comparator>>=|>|<=|<|=|\^|~)/u.exec(value.trim())?.groups?.comparator ?? "";
+}
 function formatRuntimeFacts(facts) {
     return facts.map((fact) => `${fact.source} ${fact.version}`).join(", ");
+}
+function factAllowsMentionedMajor(fact, mentionedMajor) {
+    const factMajor = extractMajorVersion(fact.version);
+    if (!factMajor) {
+        return true;
+    }
+    const parsedFactMajor = Number(factMajor);
+    if (!Number.isFinite(parsedFactMajor)) {
+        return true;
+    }
+    const comparator = extractComparator(fact.version);
+    if (comparator === ">=" || comparator === ">") {
+        return mentionedMajor >= parsedFactMajor;
+    }
+    if (comparator === "<=" || comparator === "<") {
+        return mentionedMajor <= parsedFactMajor;
+    }
+    return mentionedMajor === parsedFactMajor;
 }
 function hasMatchingRuntimeMajor(mention, facts) {
     const mentionedMajor = extractMajorVersion(mention.version);
     if (!mentionedMajor) {
         return true;
     }
-    return facts.some((fact) => extractMajorVersion(fact.version) === mentionedMajor);
+    const parsedMentionedMajor = Number(mentionedMajor);
+    if (!Number.isFinite(parsedMentionedMajor)) {
+        return true;
+    }
+    return facts.some((fact) => factAllowsMentionedMajor(fact, parsedMentionedMajor));
 }
 export function runtimeMismatch(context) {
     const issues = [];

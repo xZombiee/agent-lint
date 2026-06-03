@@ -4,8 +4,38 @@ function extractMajorVersion(value: string): string | null {
   return /v?(?<major>\d+)/iu.exec(value.replace(/^[<>=~^\s]+/u, ""))?.groups?.major ?? null;
 }
 
+function extractComparator(value: string): string {
+  return /^(?<comparator>>=|>|<=|<|=|\^|~)/u.exec(value.trim())?.groups?.comparator ?? "";
+}
+
 function formatRuntimeFacts(facts: RuntimeFact[]): string {
   return facts.map((fact) => `${fact.source} ${fact.version}`).join(", ");
+}
+
+function factAllowsMentionedMajor(fact: RuntimeFact, mentionedMajor: number): boolean {
+  const factMajor = extractMajorVersion(fact.version);
+
+  if (!factMajor) {
+    return true;
+  }
+
+  const parsedFactMajor = Number(factMajor);
+
+  if (!Number.isFinite(parsedFactMajor)) {
+    return true;
+  }
+
+  const comparator = extractComparator(fact.version);
+
+  if (comparator === ">=" || comparator === ">") {
+    return mentionedMajor >= parsedFactMajor;
+  }
+
+  if (comparator === "<=" || comparator === "<") {
+    return mentionedMajor <= parsedFactMajor;
+  }
+
+  return mentionedMajor === parsedFactMajor;
 }
 
 function hasMatchingRuntimeMajor(mention: RuntimeMention, facts: RuntimeFact[]): boolean {
@@ -15,7 +45,13 @@ function hasMatchingRuntimeMajor(mention: RuntimeMention, facts: RuntimeFact[]):
     return true;
   }
 
-  return facts.some((fact) => extractMajorVersion(fact.version) === mentionedMajor);
+  const parsedMentionedMajor = Number(mentionedMajor);
+
+  if (!Number.isFinite(parsedMentionedMajor)) {
+    return true;
+  }
+
+  return facts.some((fact) => factAllowsMentionedMajor(fact, parsedMentionedMajor));
 }
 
 export function runtimeMismatch(context: ScanContext): AgentLintIssue[] {

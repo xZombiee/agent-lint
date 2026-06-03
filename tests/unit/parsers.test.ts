@@ -195,6 +195,7 @@ test("extractPackageManagerMentions detects install and script commands", () => 
   const mentions = extractPackageManagerMentions(`
 Run \`npm install\`, then pnpm run build.
 This package mentions npm but is not a command.
+Keep Node + Bun paths working.
 `);
 
   assert.deepStrictEqual(

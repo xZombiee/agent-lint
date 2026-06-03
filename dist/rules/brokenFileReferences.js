@@ -166,6 +166,10 @@ function buildSuggestion(referencePath, suggestions) {
     }
     return `Use ${suggestions[0]} or update the instruction.`;
 }
+function isActionDirectoryReference(reference) {
+    return (reference.target === "dir" &&
+        /\b(update|edit|modify|start in|look in|check|extend|add to|move to|work in)\b/iu.test(reference.instructionText));
+}
 export function brokenFileReferences(context) {
     const issues = [];
     for (const instructionFile of context.instructionFiles) {
@@ -215,7 +219,9 @@ export function brokenFileReferences(context) {
                     continue;
                 }
                 const suggestions = findClosestPaths(candidates[0] ?? reference.path, context.repoFiles, 3);
-                const severity = reference.target === "dir" ? "warning" : "error";
+                const severity = reference.target === "dir" && !isActionDirectoryReference(reference)
+                    ? "warning"
+                    : "error";
                 issues.push({
                     id: `broken-file-reference:${instructionFile.path}:${reference.line}:${reference.path}`,
                     rule: "brokenFileReferences",

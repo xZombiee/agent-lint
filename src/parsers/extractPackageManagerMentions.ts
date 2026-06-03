@@ -9,7 +9,9 @@ function hasCommandCue(line: string, matchIndex: number): boolean {
 
   return (
     /[`$]\s*$/u.test(before) ||
-    /\b(run|use|execute|install|before|after|then|with|via|using)\b/u.test(before) ||
+    /\b(run|use|execute|install|before|after|then|with|via|using)\s*(?:[`"']?\s*)?$/u.test(
+      before,
+    ) ||
     (line.slice(0, matchIndex).trim() === "" && /^\b(?:npm|pnpm|yarn|bun)\s+/u.test(after))
   );
 }

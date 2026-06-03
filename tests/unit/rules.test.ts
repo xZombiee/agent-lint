@@ -187,6 +187,17 @@ test("runtimeMismatch warns when instruction runtime version conflicts with repo
   assert.match(issues[0]?.evidence.repoFact ?? "", /20\.10\.0/u);
 });
 
+test("runtimeMismatch accepts mentioned versions allowed by a minimum engine range", () => {
+  const context = createContext("Runtime: Node 22.19+; Node 24 recommended.");
+  context.repoFacts.runtimes = {
+    node: [{ source: "package.json engines.node", version: ">=22.19.0" }],
+  };
+
+  const issues = runtimeMismatch(context);
+
+  assert.equal(issues.length, 0);
+});
+
 test("ciReferenceMismatch validates concrete GitHub Actions workflow and job names", () => {
   const context = createContext("GitHub Actions workflow `deploy` must pass job `publish`.");
   context.repoFacts.ci = {
@@ -227,6 +238,13 @@ test("brokenFileReferences downgrades missing directories to warnings", () => {
 
   assert.equal(issues.length, 1);
   assert.equal(issues[0]?.severity, "warning");
+});
+
+test("brokenFileReferences escalates missing action directories to errors", () => {
+  const issues = brokenFileReferences(createContext("Update `src/extension/endpoint/` for model routing."));
+
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0]?.severity, "error");
 });
 
 test("brokenFileReferences treats external repo references as informational only", () => {

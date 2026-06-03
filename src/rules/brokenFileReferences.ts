@@ -252,6 +252,15 @@ function buildSuggestion(referencePath: string, suggestions: string[]): string {
   return `Use ${suggestions[0]} or update the instruction.`;
 }
 
+function isActionDirectoryReference(reference: FileReference): boolean {
+  return (
+    reference.target === "dir" &&
+    /\b(update|edit|modify|start in|look in|check|extend|add to|move to|work in)\b/iu.test(
+      reference.instructionText,
+    )
+  );
+}
+
 export function brokenFileReferences(context: ScanContext): AgentLintIssue[] {
   const issues: AgentLintIssue[] = [];
 
@@ -324,7 +333,10 @@ export function brokenFileReferences(context: ScanContext): AgentLintIssue[] {
           context.repoFiles,
           3,
         );
-        const severity = reference.target === "dir" ? "warning" : "error";
+        const severity =
+          reference.target === "dir" && !isActionDirectoryReference(reference)
+            ? "warning"
+            : "error";
 
         issues.push({
           id: `broken-file-reference:${instructionFile.path}:${reference.line}:${reference.path}`,
