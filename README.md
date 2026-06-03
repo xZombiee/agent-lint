@@ -1,38 +1,20 @@
 # agent-lint
 
-CLI that lints stale, broken, and contradictory AI coding instructions in your repository.
+Find stale AGENTS.md guidance before your agent follows it.
 
-## What It Does
-
-Agent Lint validates repository instruction files against repository facts before a coding agent relies on them.
-
-V0.1 focuses on factual checks only:
-
-- Broken file references in instruction files
-- Missing package scripts mentioned in instructions
-- Installed-vs-mentioned tool mismatches
-- A narrow class of explicit instruction contradictions
-
-V0.1 does not edit repository files. It reports issues and suggestions only.
-
-## Scope
-
-Agent Lint is optimized for Node and TypeScript repositories.
-
-It can scan any repository, but package and tool checks only have strong guarantees when `package.json` is present.
+`agent-lint` checks AI coding instructions against real repository facts. It catches broken paths, missing commands, outdated tooling assumptions, and contradictory guidance before Codex, Claude, Cursor, Copilot, or another coding agent follows stale instructions.
 
 ## Install
 
-Published npm install:
-
-```bash
-npx agent-lint
-```
-
-Until the package is published, use the GitHub source tarball. This path is stable for global and project-local installs:
+Until `agent-lint` is published to npm, install it from GitHub:
 
 ```bash
 npm install -g https://github.com/xZombiee/agent-lint/archive/refs/heads/main.tar.gz
+```
+
+Run it:
+
+```bash
 agent-lint
 ```
 
@@ -40,27 +22,97 @@ Project-local install:
 
 ```bash
 npm install -D https://github.com/xZombiee/agent-lint/archive/refs/heads/main.tar.gz
-npx agent-lint
+npm exec agent-lint
 ```
 
-Project-local GitHub shorthand also works:
+After the package is published, the install command will become:
 
 ```bash
-npm install -D github:xZombiee/agent-lint
-npx agent-lint
+npm install -g agent-lint
 ```
 
-Avoid `npm install -g github:xZombiee/agent-lint` for now. On some npm/Homebrew combinations it creates the global binary link but leaves the package directory empty.
+## Quick start
 
-## Usage
-
-Default local scan:
+Scan the current repository:
 
 ```bash
 agent-lint
 ```
 
-Available modes:
+Scan another repository:
+
+```bash
+agent-lint --project ../some-other-repo
+```
+
+Use a config file:
+
+```bash
+agent-lint --config agent-lint.config.json
+```
+
+## Example
+
+An instruction file says:
+
+```md
+Run `npm test` before submitting.
+
+Shared HTTP helpers live in `src/api/client.ts`.
+
+Use Jest for tests.
+
+Do not use Redux.
+```
+
+But the repository facts say:
+
+```txt
+package.json has no "test" script.
+src/api/client.ts does not exist.
+Vitest is installed, Jest is not.
+Redux packages are installed.
+```
+
+`agent-lint` reports:
+
+```txt
+Agent Lint
+
+Scanned 1 instruction file.
+Found 4 issues: 1 error, 3 warnings, 0 infos.
+
+ERROR AGENTS.md:3 Broken file reference
+Instruction says: Shared HTTP helpers live in `src/api/client.ts`.
+Repo fact: "src/api/client.ts" does not exist.
+Suggestion: Use `src/lib/http.ts` or update the instruction.
+
+WARNING AGENTS.md:1 Missing package script
+Instruction says: Run `npm test` before submitting.
+Repo fact: package.json has no "test" script.
+
+WARNING AGENTS.md:5 Tool mismatch
+Instruction says: Use Jest for tests.
+Repo fact: Vitest is installed, Jest is not.
+
+WARNING AGENTS.md:7 Explicit contradiction
+Instruction says: Do not use Redux.
+Repo fact: Redux packages are installed.
+```
+
+## Why it matters
+
+AI coding agents are only as reliable as the instructions they read.
+
+Modern repositories often contain agent-facing files such as `AGENTS.md`, `CLAUDE.md`, Cursor rules, and GitHub Copilot instructions. These files tell agents where code lives, which commands to run, which tools to use, and which workflows to avoid.
+
+But repositories change. Instructions drift.
+
+A stale instruction can make an agent search for deleted files, run missing scripts, follow outdated tooling guidance, or waste tokens, CI runs, and reviewer time.
+
+`agent-lint` turns that hidden instruction drift into visible, reviewable issues.
+
+## Available modes
 
 ```bash
 agent-lint
@@ -72,118 +124,102 @@ agent-lint --config agent-lint.config.json
 agent-lint --project ../some-other-repo
 ```
 
-## Output Modes
+## What it checks
 
-### Terminal report
+`agent-lint` focuses on factual checks:
 
-Default output is concise and actionable.
+- broken file references
+- missing package scripts
+- installed-vs-mentioned tool mismatches
+- narrow, high-confidence instruction contradictions
 
-Severity colors in terminal mode:
+It does not edit repository files. It only reports issues and suggestions.
 
-- `error`: red
-- `warning`: yellow
-- `info`: blue
-- clean scan: green
+## Output
 
-Set `NO_COLOR=1` to disable ANSI colors.
-
-Example:
+Default output is designed for humans:
 
 ```txt
 Agent Lint
 
 Scanned 3 instruction files.
-Found 4 issues: 1 error, 3 warning, 0 info.
+Found 4 issues: 1 error, 3 warnings, 0 infos.
 
 ERROR AGENTS.md:12 Broken file reference
-Instruction says: Shared HTTP helpers live in src/api/client.ts.
-Repo fact: "src/api/client.ts" does not exist in the repository.
-Suggestion: Use src/lib/http.ts or update the instruction.
+Instruction says: Shared HTTP helpers live in `src/api/client.ts`.
+Repo fact: "src/api/client.ts" does not exist.
+Suggestion: Use `src/lib/http.ts` or update the instruction.
 ```
 
-### JSON report
+Severity levels:
 
-`--json` prints the stable automation interface to stdout.
+- `error`: likely broken instruction
+- `warning`: suspicious instruction drift
+- `info`: external, environment-specific, or intentionally unverifiable reference
 
-Schema:
-
-```ts
-type IssueSeverity = "info" | "warning" | "error";
-
-type AgentLintIssue = {
-  id: string;
-  rule:
-    | "brokenFileReferences"
-    | "missingPackageScripts"
-    | "toolMismatch"
-    | "explicitContradictions";
-  severity: IssueSeverity;
-  sourceFile: string;
-  line?: number;
-  message: string;
-  referenceKind?: "hard" | "example" | "policy" | "env";
-  evidence: {
-    instructionText: string;
-    repoFact: string;
-  };
-  suggestion?: string;
-  suggestions?: string[];
-};
-
-type AgentLintReport = {
-  projectRoot: string;
-  scannedFiles: string[];
-  summary: {
-    issueCount: number;
-    infoCount: number;
-    warningCount: number;
-    errorCount: number;
-  };
-  issues: AgentLintIssue[];
-};
-```
-
-### Codex handoff summary
-
-`--codex` prints a Markdown summary meant for copy/paste into a coding agent workflow.
-
-The summary tells the agent to:
-
-- Prefer repository facts over stale instructions
-- Update contradicted instruction files before relying on them
-- Rerun Agent Lint after remediation
-
-## Artifact Writing
-
-`--write-summary` writes artifacts to `.agent-lint/` by default:
-
-- `.agent-lint/report.json`
-- `.agent-lint/summary.md`
-
-Standard scans do not write files.
-
-If you want the artifacts ignored by Git, add:
-
-```gitignore
-.agent-lint/
-```
+Set `NO_COLOR=1` to disable terminal colors.
 
 ## CI
 
-Recommended CI command:
+Use `--ci` in automated checks:
 
 ```bash
 agent-lint --ci
 ```
 
-CI semantics in V0.1:
+Exit codes:
 
-- Exit `0`: no issues
-- Exit `1`: warnings and/or errors found
+```txt
+0  no issues found
+1  warnings or errors found
+```
 
-## Supported Instruction Files
+## JSON output
 
-Default discovery patterns:
+Use `--json` for automation:
+
+```bash
+agent-lint --json
+```
+
+The JSON report includes scanned files, summary counts, issue severity, source file and line, instruction text, repository fact, and optional suggestions.
+
+## Codex handoff
+
+Use `--codex` to generate a compact Markdown summary for a coding agent:
+
+```bash
+agent-lint --codex
+```
+
+The summary is designed to help an agent fix instruction drift without loading the full report.
+
+## Artifact writing
+
+Use `--write-summary` to write reports to `.agent-lint/`:
+
+```bash
+agent-lint --write-summary
+```
+
+Generated files:
+
+```txt
+.agent-lint/report.json
+.agent-lint/summary.md
+```
+
+Standard scans do not write files.
+
+To ignore generated artifacts, add this to `.gitignore`:
+
+```gitignore
+.agent-lint/
+```
+
+## Supported instruction files
+
+By default, `agent-lint` scans:
 
 - `AGENTS.md`
 - `**/AGENTS.md`
@@ -198,29 +234,25 @@ Default discovery patterns:
 - `.github/copilot-instructions.md`
 - `**/.github/copilot-instructions.md`
 
-Nested instruction files are scanned, so a repository can keep local `AGENTS.md` files inside subdirectories.
+Nested instruction files are supported.
 
 ## Configuration
 
-Agent Lint supports a single JSON config file:
+`agent-lint` supports a single JSON config file:
 
 ```txt
 agent-lint.config.json
 ```
 
-Supported fields:
+Example:
 
 ```json
 {
   "instructionFiles": [
     "AGENTS.md",
     "**/AGENTS.md",
-    "agents.md",
-    "**/agents.md",
     "CLAUDE.md",
     "**/CLAUDE.md",
-    "claude.md",
-    "**/claude.md",
     ".cursor/rules/*.mdc",
     "**/.cursor/rules/*.mdc",
     ".github/copilot-instructions.md",
@@ -233,94 +265,27 @@ Supported fields:
     "missingPackageScripts": true,
     "toolMismatch": true,
     "explicitContradictions": true
-  },
-  "severity": {
-    "brokenFileReferences": "error",
-    "missingPackageScripts": "warning",
-    "toolMismatch": "warning",
-    "explicitContradictions": "warning"
   }
 }
 ```
 
-## Rule Coverage
+## Scope
 
-### Broken file references
+`agent-lint` is optimized for Node and TypeScript repositories.
 
-Detects path-like references in instruction files and classifies them before validating:
+It can scan any repository, but package-script and tool checks are most reliable when `package.json` is present.
 
-- `hard`: concrete repo paths
-- `example`: illustrative paths
-- `policy`: path-policy guidance such as ignored artifact locations
-- `env`: environment or runtime assumptions
+## Limitations
 
-Hard references are resolved relative to the repository root and, for nested instruction files, relative to the instruction file directory as well.
+`agent-lint` checks facts that can be verified locally:
 
-Git-ignore checks consider repository `.gitignore` files, `.git/info/exclude`, and the configured global Git exclude file when available.
+- does this file exist?
+- does this directory exist?
+- does this package script exist?
+- is this tool installed?
+- does this instruction contradict an obvious repository fact?
 
-Default severities:
-
-- missing hard files: `error`
-- missing hard directories: `warning`
-- unresolved example, policy, or environment paths: `info`
-
-### Missing package scripts
-
-Detects commands such as `npm test`, `npm run lint`, `pnpm build`, `yarn test`, and `bun test`, then checks whether the referenced script exists in `package.json`.
-
-Default severity: `warning`
-
-### Tool mismatch
-
-Compares supported tool mentions in instructions against installed dependencies and devDependencies.
-
-Initial supported tool list:
-
-- Jest
-- Vitest
-- Playwright
-- Cypress
-- Redux
-- Zustand
-- ESLint
-- Prettier
-- Tailwind
-- Prisma
-- Drizzle
-- Next.js
-- Vite
-
-Default severity: `warning`
-
-### Explicit contradictions
-
-Implements a narrow high-confidence contradiction class in V0.1.
-
-Supported examples:
-
-- “Do not use Redux” while Redux packages are installed
-- “Use Jest” while Jest is absent and Vitest is present
-- “Run npm test” while no `test` script exists
-
-Default severity: `warning`
-
-## Recommended Remediation Workflow
-
-Human-led loop:
-
-1. Run Agent Lint.
-2. Review each finding.
-3. Decide whether the instruction is stale or the repository drifted.
-4. Update instructions or code accordingly.
-5. Rerun Agent Lint.
-
-Agent-assisted loop:
-
-1. Run `agent-lint --codex`.
-2. Provide the summary to your coding agent together with the target instruction files.
-3. Ask the agent to fix stale instructions first and explain anything it cannot safely resolve.
-4. Review the edits.
-5. Rerun Agent Lint.
+It does not try to understand every instruction, and it does not replace human review.
 
 ## Development
 
@@ -342,8 +307,12 @@ Build:
 npm run build
 ```
 
-Run both:
+Run all checks:
 
 ```bash
 npm run check
 ```
+
+## License
+
+MIT
