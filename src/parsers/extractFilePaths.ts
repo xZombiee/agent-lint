@@ -355,6 +355,57 @@ function isPackageImportSpecifier(candidatePath: string): boolean {
   );
 }
 
+function isPackageExportSubpathReference(candidatePath: string, line: string): boolean {
+  return (
+    /^\.\/[A-Za-z0-9._-]+$/u.test(candidatePath) &&
+    /\b(exports?|subpath|entrypoints?|package)\b/iu.test(line)
+  );
+}
+
+function isNamingConventionExample(candidatePath: string, line: string): boolean {
+  return (
+    !candidatePath.includes("/") &&
+    hasFileExtension(candidatePath) &&
+    /\b(kebab-case|snake_case|pascalcase|camelcase|naming|file names?|filenames?|examples?)\b/iu.test(
+      line,
+    ) &&
+    !hasHardRequirementCue(line)
+  );
+}
+
+function isLibraryOrFrameworkToken(candidatePath: string, line: string): boolean {
+  return (
+    !candidatePath.includes("/") &&
+    /^[a-z][a-z0-9-]*\.js$/u.test(candidatePath) &&
+    /\b(framework|frameworks|libraries|library|package|packages|dependency|dependencies|stack|sdk|integration|runtime|tooling|hardhat|ethers|typescript)\b/iu.test(
+      line,
+    ) &&
+    !hasHardRequirementCue(line)
+  );
+}
+
+function isPlaceholderImportSnippet(candidatePath: string, line: string): boolean {
+  const basename = splitPathSegments(candidatePath).at(-1) ?? candidatePath;
+
+  return (
+    /^[A-Z][A-Za-z0-9]*\.[A-Za-z0-9]+$/u.test(basename) &&
+    /\b(import|imports|named imports?|placeholder|example)\b/iu.test(line)
+  );
+}
+
+function isVariantQualifiedPathReference(candidatePath: string, line: string): boolean {
+  const escapedPath = candidatePath.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+
+  return (
+    new RegExp(`\`${escapedPath}\`\\s*\\([^)]*(?:/|\\|)[^)]*\\)`, "u").test(line) &&
+    /\b(appropriate|variant|variants|one of|choose|common|node|browser|vscode)\b/iu.test(line)
+  );
+}
+
+function isShellRecursiveGlob(candidatePath: string): boolean {
+  return candidatePath === "./..." || candidatePath === "..." || candidatePath === "./";
+}
+
 function extractMarkdownLinkTargets(line: string): string[] {
   const matches = line.matchAll(/\[[^\]]+\]\((?<target>[^)\s]+)\)/gu);
   const targets: string[] = [];
@@ -710,9 +761,15 @@ export function extractFilePaths(content: string): FileReference[] {
 
       if (
         normalizedToken === "" ||
+        isShellRecursiveGlob(normalizedToken) ||
         isBareConfigExample(normalizedToken, trimmedLine) ||
         isBranchPatternReference(normalizedToken, trimmedLine) ||
         isEnvironmentRelativeReference(normalizedToken, trimmedLine) ||
+        isPackageExportSubpathReference(normalizedToken, trimmedLine) ||
+        isNamingConventionExample(normalizedToken, trimmedLine) ||
+        isLibraryOrFrameworkToken(normalizedToken, trimmedLine) ||
+        isPlaceholderImportSnippet(normalizedToken, trimmedLine) ||
+        isVariantQualifiedPathReference(normalizedToken, trimmedLine) ||
         (!hasStrongLocalSignal(normalizedToken) &&
           !isExternalReferenceCandidate(normalizedToken, trimmedLine))
       ) {

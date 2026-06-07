@@ -257,6 +257,35 @@ function isPackageImportSpecifier(candidatePath) {
             ? true
             : /^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(segment)));
 }
+function isPackageExportSubpathReference(candidatePath, line) {
+    return (/^\.\/[A-Za-z0-9._-]+$/u.test(candidatePath) &&
+        /\b(exports?|subpath|entrypoints?|package)\b/iu.test(line));
+}
+function isNamingConventionExample(candidatePath, line) {
+    return (!candidatePath.includes("/") &&
+        hasFileExtension(candidatePath) &&
+        /\b(kebab-case|snake_case|pascalcase|camelcase|naming|file names?|filenames?|examples?)\b/iu.test(line) &&
+        !hasHardRequirementCue(line));
+}
+function isLibraryOrFrameworkToken(candidatePath, line) {
+    return (!candidatePath.includes("/") &&
+        /^[a-z][a-z0-9-]*\.js$/u.test(candidatePath) &&
+        /\b(framework|frameworks|libraries|library|package|packages|dependency|dependencies|stack|sdk|integration|runtime|tooling|hardhat|ethers|typescript)\b/iu.test(line) &&
+        !hasHardRequirementCue(line));
+}
+function isPlaceholderImportSnippet(candidatePath, line) {
+    const basename = splitPathSegments(candidatePath).at(-1) ?? candidatePath;
+    return (/^[A-Z][A-Za-z0-9]*\.[A-Za-z0-9]+$/u.test(basename) &&
+        /\b(import|imports|named imports?|placeholder|example)\b/iu.test(line));
+}
+function isVariantQualifiedPathReference(candidatePath, line) {
+    const escapedPath = candidatePath.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    return (new RegExp(`\`${escapedPath}\`\\s*\\([^)]*(?:/|\\|)[^)]*\\)`, "u").test(line) &&
+        /\b(appropriate|variant|variants|one of|choose|common|node|browser|vscode)\b/iu.test(line));
+}
+function isShellRecursiveGlob(candidatePath) {
+    return candidatePath === "./..." || candidatePath === "..." || candidatePath === "./";
+}
 function extractMarkdownLinkTargets(line) {
     const matches = line.matchAll(/\[[^\]]+\]\((?<target>[^)\s]+)\)/gu);
     const targets = [];
@@ -501,9 +530,15 @@ export function extractFilePaths(content) {
             const sanitizedToken = sanitizeToken(token.raw);
             const normalizedToken = normalizePathToken(stripLineNumberSuffix(sanitizedToken));
             if (normalizedToken === "" ||
+                isShellRecursiveGlob(normalizedToken) ||
                 isBareConfigExample(normalizedToken, trimmedLine) ||
                 isBranchPatternReference(normalizedToken, trimmedLine) ||
                 isEnvironmentRelativeReference(normalizedToken, trimmedLine) ||
+                isPackageExportSubpathReference(normalizedToken, trimmedLine) ||
+                isNamingConventionExample(normalizedToken, trimmedLine) ||
+                isLibraryOrFrameworkToken(normalizedToken, trimmedLine) ||
+                isPlaceholderImportSnippet(normalizedToken, trimmedLine) ||
+                isVariantQualifiedPathReference(normalizedToken, trimmedLine) ||
                 (!hasStrongLocalSignal(normalizedToken) &&
                     !isExternalReferenceCandidate(normalizedToken, trimmedLine))) {
                 continue;

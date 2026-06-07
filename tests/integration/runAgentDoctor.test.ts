@@ -151,11 +151,8 @@ test("json and codex outputs contain the documented structures", async () => {
 
   assert.equal(jsonReport.summary.issueCount, 5);
   assert(jsonReport.issues.some((issue) => issue.rule === "brokenFileReferences"));
-  assert.match(
-    result.outputs.codex,
-    /Prefer repository facts over stale instruction text/u,
-  );
-  assert.match(result.outputs.codex, /## Task/u);
+  assert.match(result.outputs.codex, /Actionable issues: 5/u);
+  assert.match(result.outputs.codex, /Files to update:/u);
 });
 
 test("writeSummary creates report and summary artifacts", async () => {
@@ -172,5 +169,5 @@ test("writeSummary creates report and summary artifacts", async () => {
   const summaryMarkdown = await readFile(result.artifactPaths!.summaryPath, "utf8");
 
   assert.equal(reportJson.summary.issueCount, 5);
-  assert.match(summaryMarkdown, /# Agent Lint Summary/u);
+  assert.match(summaryMarkdown, /# Agent Lint/u);
 });

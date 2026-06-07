@@ -110,6 +110,20 @@ These docs mention e.g. and i.e. abbreviations.
   assert.deepStrictEqual(references, []);
 });
 
+test("extractFilePaths ignores naming examples, package exports, libraries, and shell recursive globs", () => {
+  const references = extractFilePaths(`
+| TS/JS files | kebab-case | \`message-service.ts\` |
+| React components | PascalCase | \`ResultsPanel.tsx\` |
+| Go files | snake_case | \`blob_compressor.go\` |
+- **Shared ESLint config:** \`@scope/eslint-config\` with exports for default, \`./nextjs\`, and \`./node\`
+- **Solidity:** Named imports only (\`import { X } from "./X.sol"\`)
+| Contracts | Hardhat + ethers.js | \`pnpm -F contracts run test\` |
+| Prover | Go test | \`go test ./... -tags nocorset,fuzzlight\` |
+`);
+
+  assert.deepStrictEqual(references, []);
+});
+
 test("extractFilePaths treats runtime generated artifacts as environment assumptions", () => {
   const references = extractFilePaths(`
 - \`events.jsonl\` — Ordered event stream.
@@ -179,6 +193,7 @@ Then run npm run lint.
 Use pnpm build for production checks.
 Run npm run typecheck in the \`build\` folder.
 Do not treat npm install as a script command.
+Do not treat \`pnpm i\` or \`pnpm hardhat compile\` as package scripts.
 Use repo wrappers (\`pnpm format:*\`, \`pnpm lint:*\`) and avoid bare \`pnpm test*\`.
 So pnpm runs inside Testbox, but this prose should not require a "runs" script.
 Root/plugin npm packages ship shrinkwrap, but this prose should not require a "packages" script.
@@ -191,11 +206,43 @@ Root/plugin npm packages ship shrinkwrap, but this prose should not require a "p
   assert.equal(commands[3]?.workingDirectory, "build");
 });
 
+test("extractCommands parses package-manager filters before run scripts", () => {
+  const commands = extractCommands(`
+| Contracts | \`pnpm -F contracts run test\` |
+| SDK core | \`pnpm --filter @scope/sdk-core run build:pre\` |
+| Placeholder package | \`pnpm -F <pkg> run test\` |
+`);
+
+  assert.deepStrictEqual(
+    commands.map((command) => ({
+      manager: command.packageManager,
+      script: command.scriptName,
+      filter: command.packageFilter,
+      raw: command.rawCommand,
+    })),
+    [
+      {
+        manager: "pnpm",
+        script: "test",
+        filter: "contracts",
+        raw: "pnpm -F contracts run test",
+      },
+      {
+        manager: "pnpm",
+        script: "build:pre",
+        filter: "@scope/sdk-core",
+        raw: "pnpm --filter @scope/sdk-core run build:pre",
+      },
+    ],
+  );
+});
+
 test("extractPackageManagerMentions detects install and script commands", () => {
   const mentions = extractPackageManagerMentions(`
 Run \`npm install\`, then pnpm run build.
 This package mentions npm but is not a command.
 Keep Node + Bun paths working.
+The \`@scope\` npm scope must exist before publishing.
 `);
 
   assert.deepStrictEqual(

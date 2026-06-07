@@ -27,6 +27,10 @@ export async function readPackageJsonAt(
   const packageJson = parsedPackageJson as Record<string, unknown>;
   const result: PackageJsonData = {};
 
+  if (typeof packageJson.name === "string") {
+    result.name = packageJson.name;
+  }
+
   if (isRecordOfStrings(packageJson.scripts)) {
     result.scripts = packageJson.scripts;
   }

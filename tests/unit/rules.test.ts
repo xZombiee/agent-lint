@@ -374,6 +374,56 @@ test("missingPackageScripts uses command working-directory package.json when pre
   assert.equal(issues.length, 0);
 });
 
+test("missingPackageScripts resolves pnpm filter commands to workspace packages", () => {
+  const context = createContext("Run `pnpm -F contracts run lint:fix` before pushing.");
+  context.packageJson = { scripts: {} };
+  context.packageJsons = [
+    { path: "package.json", data: { scripts: {} } },
+    {
+      path: "contracts/package.json",
+      data: { name: "contracts", scripts: { "lint:fix": "eslint --fix ." } },
+    },
+  ];
+
+  const issues = missingPackageScripts(context);
+
+  assert.equal(issues.length, 0);
+});
+
+test("missingPackageScripts resolves scoped pnpm filters by package name", () => {
+  const context = createContext("Run `pnpm --filter @scope/sdk-core run build:pre` before build.");
+  context.packageJson = { scripts: {} };
+  context.packageJsons = [
+    { path: "package.json", data: { scripts: {} } },
+    {
+      path: "packages/sdk-core/package.json",
+      data: { name: "@scope/sdk-core", scripts: { "build:pre": "node ./prebuild.js" } },
+    },
+  ];
+
+  const issues = missingPackageScripts(context);
+
+  assert.equal(issues.length, 0);
+});
+
+test("packageManagerMismatch ignores global tool installation guidance", () => {
+  const context = createContext("Install language tooling with `npm install -g typescript-language-server typescript`.");
+  context.repoFacts.packageManagers = {
+    declared: "pnpm",
+    lockfiles: {
+      npm: [],
+      pnpm: ["pnpm-lock.yaml"],
+      yarn: [],
+      bun: [],
+    },
+    workspaceFiles: ["pnpm-workspace.yaml"],
+  };
+
+  const issues = packageManagerMismatch(context);
+
+  assert.equal(issues.length, 0);
+});
+
 test("brokenFileReferences suppresses unresolved environment assumptions", () => {
   const issues = brokenFileReferences(
     createContext("Use generated tiny plugin fixtures for `api.js` / `runtime-api.js` fallback behavior."),
