@@ -207,6 +207,7 @@ test("formatCodexReport groups actionable issues by file and compresses info not
   );
   assert.doesNotMatch(output, /Recommended behavior for the agent/u);
   assert.doesNotMatch(output, /## Task/u);
+  assert.doesNotMatch(output, /Next step:/u);
 });
 
 test("formatCodexReport renders a short success message when no issues exist", () => {
@@ -301,4 +302,96 @@ test("formatCodexReport limits long per-file actionable sections", () => {
   assert.match(output, /missing GitHub Actions workflow at line 12/u);
   assert.match(output, /\n  \+1 more issue group/u);
   assert.doesNotMatch(output, /tool mismatch at line 13/u);
+});
+
+test("formatCodexReport truncates long repo facts and limits non-blocking file lists", () => {
+  const report: AgentLintReport = {
+    projectRoot: "/repo",
+    scannedFiles: ["AGENTS.md", "docs/AGENTS.md", "packages/a/AGENTS.md", "packages/b/AGENTS.md", "packages/c/AGENTS.md"],
+    summary: {
+      issueCount: 5,
+      errorCount: 1,
+      warningCount: 0,
+      infoCount: 4,
+    },
+    issues: [
+      {
+        id: "1",
+        rule: "toolMismatch",
+        severity: "error",
+        sourceFile: "AGENTS.md",
+        line: 8,
+        message: "Tool mismatch",
+        evidence: {
+          instructionText: "Use Jest.",
+          repoFact:
+            "Jest was not detected, but Vitest was detected via vitest.config.ts, package.json, test/setup.ts, and several workspace-level config files that make the mismatch obvious.",
+        },
+      },
+      {
+        id: "2",
+        rule: "brokenFileReferences",
+        severity: "info",
+        sourceFile: "docs/AGENTS.md",
+        line: 10,
+        message: "External repository reference",
+        referenceKind: "external",
+        evidence: {
+          instructionText: "See docs repo.",
+          repoFact:
+            "The instruction points to another repository or external workspace, which cannot be validated against this repository.",
+        },
+      },
+      {
+        id: "3",
+        rule: "brokenFileReferences",
+        severity: "info",
+        sourceFile: "packages/a/AGENTS.md",
+        line: 11,
+        message: "External repository reference",
+        referenceKind: "external",
+        evidence: {
+          instructionText: "See package A repo.",
+          repoFact:
+            "The instruction points to another repository or external workspace, which cannot be validated against this repository.",
+        },
+      },
+      {
+        id: "4",
+        rule: "brokenFileReferences",
+        severity: "info",
+        sourceFile: "packages/b/AGENTS.md",
+        line: 12,
+        message: "External repository reference",
+        referenceKind: "external",
+        evidence: {
+          instructionText: "See package B repo.",
+          repoFact:
+            "The instruction points to another repository or external workspace, which cannot be validated against this repository.",
+        },
+      },
+      {
+        id: "5",
+        rule: "brokenFileReferences",
+        severity: "info",
+        sourceFile: "packages/c/AGENTS.md",
+        line: 13,
+        message: "External repository reference",
+        referenceKind: "external",
+        evidence: {
+          instructionText: "See package C repo.",
+          repoFact:
+            "The instruction points to another repository or external workspace, which cannot be validated against this repository.",
+        },
+      },
+    ],
+  };
+
+  const output = formatCodexReport(report);
+
+  assert.match(output, /tool mismatch at line 8: Jest was not detected, but Vitest was detected via vitest\.config\.ts, package\.json, test\/setup\.ts, and several workspa\.\.\./u);
+  assert.match(
+    output,
+    /external repository references could not be validated locally: `docs\/AGENTS\.md` \(line 10\); `packages\/a\/AGENTS\.md` \(line 11\); `packages\/b\/AGENTS\.md` \(line 12\); \+1 more file/u,
+  );
 });

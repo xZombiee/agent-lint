@@ -1,6 +1,8 @@
 import type { AgentLintIssue, AgentLintReport } from "../types.ts";
 
 const MAX_ACTIONABLE_GROUPS_PER_FILE = 3;
+const MAX_INFO_FILES_PER_GROUP = 3;
+const MAX_REPO_FACT_LENGTH = 120;
 
 function pushGroup<K, V>(groups: Map<K, V[]>, key: K, value: V): void {
   const bucket = groups.get(key) ?? [];
@@ -73,6 +75,15 @@ function trimSentence(value: string): string {
   return value.replace(/\.+$/u, "");
 }
 
+function truncateText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  const truncated = value.slice(0, maxLength - 3).trimEnd();
+  return `${truncated}...`;
+}
+
 function lowerCaseFirst(value: string): string {
   return value.length === 0 ? value : `${value[0]!.toLowerCase()}${value.slice(1)}`;
 }
@@ -127,7 +138,9 @@ function summarizeMissingScriptIssues(issues: AgentLintIssue[]): string {
 }
 
 function summarizeGenericIssues(issues: AgentLintIssue[]): string {
-  const repoFacts = unique(issues.map((issue) => trimSentence(issue.evidence.repoFact)));
+  const repoFacts = unique(
+    issues.map((issue) => truncateText(trimSentence(issue.evidence.repoFact), MAX_REPO_FACT_LENGTH)),
+  );
   return `${lowerCaseFirst(issues[0]!.message)} at ${formatLineLabel(issues)}: ${joinWithAnd(repoFacts)}`;
 }
 
@@ -190,10 +203,17 @@ function formatInfoLocations(issues: AgentLintIssue[]): string {
     pushGroup(files, issue.sourceFile, issue);
   }
 
-  return [...files.entries()]
+  const entries = [...files.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([sourceFile, fileIssues]) => `\`${sourceFile}\` (${formatLineLabel(fileIssues)})`)
-    .join("; ");
+    .map(([sourceFile, fileIssues]) => `\`${sourceFile}\` (${formatLineLabel(fileIssues)})`);
+  const visibleEntries = entries.slice(0, MAX_INFO_FILES_PER_GROUP);
+  const hiddenEntryCount = Math.max(0, entries.length - visibleEntries.length);
+
+  if (hiddenEntryCount === 0) {
+    return visibleEntries.join("; ");
+  }
+
+  return `${visibleEntries.join("; ")}; +${hiddenEntryCount} more file${hiddenEntryCount === 1 ? "" : "s"}`;
 }
 
 function summarizeInfoGroup(issues: AgentLintIssue[]): string {
@@ -241,8 +261,6 @@ export function formatCodexReport(report: AgentLintReport): string {
         .map(summarizeInfoGroup),
     );
   }
-
-  lines.push("", "Next step: update the instruction files to match the repository, then rerun `agent-lint`.");
 
   return lines.join("\n");
 }
