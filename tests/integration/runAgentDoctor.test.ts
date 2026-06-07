@@ -151,7 +151,7 @@ test("json and codex outputs contain the documented structures", async () => {
 
   assert.equal(jsonReport.summary.issueCount, 5);
   assert(jsonReport.issues.some((issue) => issue.rule === "brokenFileReferences"));
-  assert.match(result.outputs.codex, /Actionable issues: 5/u);
+  assert.match(result.outputs.codex, /Actionable findings: 1 file, 5 issues/u);
   assert.match(result.outputs.codex, /Files to update:/u);
 });
 

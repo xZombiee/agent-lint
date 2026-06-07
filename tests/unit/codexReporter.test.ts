@@ -192,7 +192,7 @@ test("formatCodexReport groups actionable issues by file and compresses info not
   const output = formatCodexReport(report);
 
   assert.match(output, /^# Agent Lint$/mu);
-  assert.match(output, /Actionable issues: 5/u);
+  assert.match(output, /Actionable findings: 2 files, 5 issues/u);
   assert.match(
     output,
     /- `extensions\/acpx\/AGENTS\.md`\n  missing package scripts in `extensions\/acpx\/package\.json` at lines 41-42: `test:extension` and `build`/u,
@@ -295,6 +295,7 @@ test("formatCodexReport limits long per-file actionable sections", () => {
   const output = formatCodexReport(report);
 
   assert.match(output, /- `AGENTS\.md`/u);
+  assert.match(output, /Actionable findings: 1 file, 4 issues/u);
   assert.match(output, /package manager mismatch at line 10/u);
   assert.match(output, /runtime version mismatch at line 11/u);
   assert.match(output, /missing GitHub Actions workflow at line 12/u);

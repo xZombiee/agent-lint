@@ -7,6 +7,9 @@ function pushGroup(groups, key, value) {
 function unique(values) {
     return [...new Set(values)];
 }
+function formatCount(value, singular, plural) {
+    return `${value} ${value === 1 ? singular : plural}`;
+}
 function joinWithAnd(values) {
     if (values.length <= 1) {
         return values[0] ?? "";
@@ -154,7 +157,8 @@ export function formatCodexReport(report) {
     const infoIssues = report.issues.filter((issue) => issue.severity === "info");
     const lines = ["# Agent Lint", ""];
     if (actionableIssues.length > 0) {
-        lines.push(`Actionable issues: ${actionableIssues.length}`, "", "Files to update:");
+        const actionableFiles = unique(actionableIssues.map((issue) => issue.sourceFile));
+        lines.push(`Actionable findings: ${formatCount(actionableFiles.length, "file", "files")}, ${formatCount(actionableIssues.length, "issue", "issues")}`, "", "Files to update:");
         lines.push(...summarizeActionableIssues(actionableIssues));
     }
     else {
