@@ -1,3 +1,4 @@
+const MAX_ACTIONABLE_GROUPS_PER_FILE = 3;
 function pushGroup(groups, key, value) {
     const bucket = groups.get(key) ?? [];
     bucket.push(value);
@@ -99,7 +100,7 @@ function summarizeActionableFileIssues(issues) {
         .map((group) => group[0].rule === "missingPackageScripts"
         ? summarizeMissingScriptIssues(group)
         : summarizeGenericIssues(group))
-        .join("; ");
+        .join("\n");
 }
 function summarizeActionableIssues(issues) {
     const files = new Map();
@@ -108,7 +109,19 @@ function summarizeActionableIssues(issues) {
     }
     return [...files.entries()]
         .sort(([left], [right]) => left.localeCompare(right))
-        .map(([sourceFile, fileIssues]) => `- \`${sourceFile}\`: ${summarizeActionableFileIssues(fileIssues)}`);
+        .flatMap(([sourceFile, fileIssues]) => {
+        const groupedIssues = summarizeActionableFileIssues(fileIssues).split("\n");
+        const visibleGroups = groupedIssues.slice(0, MAX_ACTIONABLE_GROUPS_PER_FILE);
+        const hiddenGroupCount = Math.max(0, groupedIssues.length - visibleGroups.length);
+        const lines = [`- \`${sourceFile}\``];
+        for (const group of visibleGroups) {
+            lines.push(`  ${group}`);
+        }
+        if (hiddenGroupCount > 0) {
+            lines.push(`  +${hiddenGroupCount} more issue group${hiddenGroupCount === 1 ? "" : "s"}`);
+        }
+        return lines;
+    });
 }
 function buildInfoGroupKey(issue) {
     if (issue.rule === "brokenFileReferences" && issue.referenceKind === "external") {

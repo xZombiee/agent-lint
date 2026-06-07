@@ -195,11 +195,11 @@ test("formatCodexReport groups actionable issues by file and compresses info not
   assert.match(output, /Actionable issues: 5/u);
   assert.match(
     output,
-    /`extensions\/acpx\/AGENTS\.md`: missing package scripts in `extensions\/acpx\/package\.json` at lines 41-42: `test:extension` and `build`/u,
+    /- `extensions\/acpx\/AGENTS\.md`\n  missing package scripts in `extensions\/acpx\/package\.json` at lines 41-42: `test:extension` and `build`/u,
   );
   assert.match(
     output,
-    /`ui\/AGENTS\.md`: missing package scripts in `ui\/package\.json` at lines 13-14: `ui:i18n:sync`, `ui:i18n:check`, and `ui:i18n:report`/u,
+    /- `ui\/AGENTS\.md`\n  missing package scripts in `ui\/package\.json` at lines 13-14: `ui:i18n:sync`, `ui:i18n:check`, and `ui:i18n:report`/u,
   );
   assert.match(
     output,
@@ -228,4 +228,76 @@ test("formatCodexReport renders a short success message when no issues exist", (
     output,
     "# Agent Lint\n\nNo issues found. The scanned instructions match repository facts.",
   );
+});
+
+test("formatCodexReport limits long per-file actionable sections", () => {
+  const report: AgentLintReport = {
+    projectRoot: "/repo",
+    scannedFiles: ["AGENTS.md"],
+    summary: {
+      issueCount: 4,
+      errorCount: 4,
+      warningCount: 0,
+      infoCount: 0,
+    },
+    issues: [
+      {
+        id: "1",
+        rule: "packageManagerMismatch",
+        severity: "error",
+        sourceFile: "AGENTS.md",
+        line: 10,
+        message: "Package manager mismatch",
+        evidence: {
+          instructionText: "Use npm install.",
+          repoFact: "package.json packageManager declares pnpm, but the instruction uses npm.",
+        },
+      },
+      {
+        id: "2",
+        rule: "runtimeMismatch",
+        severity: "error",
+        sourceFile: "AGENTS.md",
+        line: 11,
+        message: "Runtime version mismatch",
+        evidence: {
+          instructionText: "Use Node 18.",
+          repoFact: "Repository runtime metadata says package.json >=20, but the instruction mentions node 18.",
+        },
+      },
+      {
+        id: "3",
+        rule: "ciReferenceMismatch",
+        severity: "error",
+        sourceFile: "AGENTS.md",
+        line: 12,
+        message: "Missing GitHub Actions workflow",
+        evidence: {
+          instructionText: "Use workflow test.",
+          repoFact: 'No GitHub Actions workflow named "test" was found. Known workflows: build.',
+        },
+      },
+      {
+        id: "4",
+        rule: "toolMismatch",
+        severity: "error",
+        sourceFile: "AGENTS.md",
+        line: 13,
+        message: "Tool mismatch",
+        evidence: {
+          instructionText: "Use Jest.",
+          repoFact: "Jest was not detected, but Vitest was detected via vitest.config.ts.",
+        },
+      },
+    ],
+  };
+
+  const output = formatCodexReport(report);
+
+  assert.match(output, /- `AGENTS\.md`/u);
+  assert.match(output, /package manager mismatch at line 10/u);
+  assert.match(output, /runtime version mismatch at line 11/u);
+  assert.match(output, /missing GitHub Actions workflow at line 12/u);
+  assert.match(output, /\n  \+1 more issue group/u);
+  assert.doesNotMatch(output, /tool mismatch at line 13/u);
 });

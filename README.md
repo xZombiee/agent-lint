@@ -192,7 +192,7 @@ Use `--codex` to generate a compact Markdown fix queue for a coding agent:
 agent-lint --codex
 ```
 
-The summary groups actionable issues by file, compresses repeated info notes, and avoids boilerplate so an agent can fix instruction drift without loading the full report.
+The summary groups actionable issues by file, breaks long file entries into short lines, compresses repeated info notes, and avoids boilerplate so an agent can fix instruction drift without loading the full report.
 
 ## Artifact writing
 
