@@ -1,14 +1,22 @@
 import type { PackageManager, PackageManagerMention } from "../types.ts";
 
 const PACKAGE_MANAGER_PATTERN =
-  /\b(?<manager>npm|pnpm|yarn|bun)\s+(?<rest>(?:run\s+)?[A-Za-z0-9:_*.-]+)/giu;
+  /\b(?<manager>npm|pnpm|yarn|bun)\s+(?<rest>(?:-[A-Za-z-]+(?:[=\s]+[^\s`|;]+)?\s+)*(?:run\s+)?[A-Za-z0-9:_*.-]+)/giu;
+
+function isInsideInlineCode(line: string, matchIndex: number): boolean {
+  const prefix = line.slice(0, matchIndex);
+  const backtickCount = [...prefix.matchAll(/`/gu)].length;
+
+  return backtickCount % 2 === 1;
+}
 
 function hasCommandCue(line: string, matchIndex: number): boolean {
   const before = line.slice(Math.max(0, matchIndex - 64), matchIndex).toLowerCase();
   const after = line.slice(matchIndex).toLowerCase();
 
   return (
-    /[`$]\s*$/u.test(before) ||
+    isInsideInlineCode(line, matchIndex) ||
+    /[$]\s*$/u.test(before) ||
     /\b(run|use|execute|install|before|after|then|with|via|using)\s*(?:[`"']?\s*)?$/u.test(
       before,
     ) ||

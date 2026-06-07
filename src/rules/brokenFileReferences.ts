@@ -328,9 +328,15 @@ export function brokenFileReferences(context: ScanContext): AgentLintIssue[] {
           continue;
         }
 
+        const suggestionPool =
+          reference.target === "dir"
+            ? context.repoDirectories
+            : reference.target === "file"
+              ? context.repoFiles
+              : [...context.repoFiles, ...context.repoDirectories];
         const suggestions = findClosestPaths(
           candidates[0] ?? reference.path,
-          context.repoFiles,
+          suggestionPool,
           3,
         );
         const severity =

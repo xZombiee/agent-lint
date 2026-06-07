@@ -20,6 +20,16 @@ function getPreferredPackageManager(context) {
         source: `${files[0]} indicates ${packageManager}`,
     };
 }
+function isGlobalToolInstall(rawCommand, instructionText) {
+    if (!/\b(?:npm|pnpm|yarn|bun)\s+(?:add|install|i)\b/iu.test(rawCommand)) {
+        return false;
+    }
+    const commandStart = instructionText.toLowerCase().indexOf(rawCommand.toLowerCase());
+    const commandText = commandStart === -1
+        ? instructionText
+        : instructionText.slice(commandStart, commandStart + 120);
+    return /\s(?:-g|--global)\b/iu.test(commandText);
+}
 export function packageManagerMismatch(context) {
     const preferred = getPreferredPackageManager(context);
     if (!preferred) {
@@ -30,6 +40,9 @@ export function packageManagerMismatch(context) {
     for (const instructionFile of context.instructionFiles) {
         for (const mention of instructionFile.packageManagerMentions) {
             if (mention.packageManager === preferred.packageManager) {
+                continue;
+            }
+            if (isGlobalToolInstall(mention.rawCommand, mention.instructionText)) {
                 continue;
             }
             const key = `${instructionFile.path}:${mention.line}:${mention.packageManager}`;

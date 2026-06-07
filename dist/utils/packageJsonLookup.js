@@ -6,6 +6,32 @@ function normalizeDirectory(repoPath) {
 function isPathWithinDirectory(repoPath, directory) {
     return directory === "" || repoPath === directory || repoPath.startsWith(`${directory}/`);
 }
+function normalizePackageFilter(packageFilter) {
+    return packageFilter
+        .replace(/^["']|["']$/gu, "")
+        .replace(/^\.\//u, "")
+        .replace(/\/+$/u, "");
+}
+function isComplexPackageFilter(packageFilter) {
+    return /[<>{}*?]|\.\.\.|^\^|!/u.test(packageFilter);
+}
+function findPackageJsonByFilter(context, packageFilter) {
+    const normalizedFilter = normalizePackageFilter(packageFilter);
+    if (normalizedFilter === "" || isComplexPackageFilter(normalizedFilter)) {
+        return null;
+    }
+    const nameMatch = context.packageJsons.find((packageJson) => packageJson.data.name === normalizedFilter);
+    if (nameMatch) {
+        return nameMatch;
+    }
+    const pathMatch = context.packageJsons.find((packageJson) => {
+        const directory = normalizeDirectory(packageJson.path);
+        return (directory === normalizedFilter ||
+            path.posix.basename(directory) === normalizedFilter ||
+            directory.endsWith(`/${normalizedFilter}`));
+    });
+    return pathMatch ?? null;
+}
 export function findNearestPackageJson(context, sourceFile) {
     let bestMatch = null;
     let bestDirectoryLength = -1;
@@ -31,6 +57,13 @@ export function findNearestPackageJson(context, sourceFile) {
     };
 }
 export function findPackageJsonForCommand(context, sourceFile, command) {
+    if (command.packageFilter) {
+        const packageJson = findPackageJsonByFilter(context, command.packageFilter);
+        if (packageJson) {
+            return packageJson;
+        }
+        return null;
+    }
     if (!command.workingDirectory) {
         return findNearestPackageJson(context, sourceFile);
     }

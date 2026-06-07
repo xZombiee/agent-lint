@@ -20,6 +20,48 @@ function isPathWithinDirectory(repoPath: string, directory: string): boolean {
   return directory === "" || repoPath === directory || repoPath.startsWith(`${directory}/`);
 }
 
+function normalizePackageFilter(packageFilter: string): string {
+  return packageFilter
+    .replace(/^["']|["']$/gu, "")
+    .replace(/^\.\//u, "")
+    .replace(/\/+$/u, "");
+}
+
+function isComplexPackageFilter(packageFilter: string): boolean {
+  return /[<>{}*?]|\.\.\.|^\^|!/u.test(packageFilter);
+}
+
+function findPackageJsonByFilter(
+  context: ScanContext,
+  packageFilter: string,
+): PackageJsonMatch | null {
+  const normalizedFilter = normalizePackageFilter(packageFilter);
+
+  if (normalizedFilter === "" || isComplexPackageFilter(normalizedFilter)) {
+    return null;
+  }
+
+  const nameMatch = context.packageJsons.find(
+    (packageJson) => packageJson.data.name === normalizedFilter,
+  );
+
+  if (nameMatch) {
+    return nameMatch;
+  }
+
+  const pathMatch = context.packageJsons.find((packageJson) => {
+    const directory = normalizeDirectory(packageJson.path);
+
+    return (
+      directory === normalizedFilter ||
+      path.posix.basename(directory) === normalizedFilter ||
+      directory.endsWith(`/${normalizedFilter}`)
+    );
+  });
+
+  return pathMatch ?? null;
+}
+
 export function findNearestPackageJson(
   context: ScanContext,
   sourceFile: string,
@@ -59,6 +101,16 @@ export function findPackageJsonForCommand(
   sourceFile: string,
   command: ScriptCommand,
 ): PackageJsonMatch | null {
+  if (command.packageFilter) {
+    const packageJson = findPackageJsonByFilter(context, command.packageFilter);
+
+    if (packageJson) {
+      return packageJson;
+    }
+
+    return null;
+  }
+
   if (!command.workingDirectory) {
     return findNearestPackageJson(context, sourceFile);
   }

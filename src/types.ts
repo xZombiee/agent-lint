@@ -61,6 +61,7 @@ export interface AgentLintReport {
 }
 
 export interface PackageJsonData {
+  name?: string;
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
@@ -101,6 +102,7 @@ export interface ScriptCommand {
   instructionText: string;
   explicitRun: boolean;
   workingDirectory?: string;
+  packageFilter?: string;
 }
 
 export interface PackageManagerMention {

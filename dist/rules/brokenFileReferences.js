@@ -218,7 +218,12 @@ export function brokenFileReferences(context) {
                     hasSafeIgnoredCandidate(candidates, reference, context)) {
                     continue;
                 }
-                const suggestions = findClosestPaths(candidates[0] ?? reference.path, context.repoFiles, 3);
+                const suggestionPool = reference.target === "dir"
+                    ? context.repoDirectories
+                    : reference.target === "file"
+                        ? context.repoFiles
+                        : [...context.repoFiles, ...context.repoDirectories];
+                const suggestions = findClosestPaths(candidates[0] ?? reference.path, suggestionPool, 3);
                 const severity = reference.target === "dir" && !isActionDirectoryReference(reference)
                     ? "warning"
                     : "error";

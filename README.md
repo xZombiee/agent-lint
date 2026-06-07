@@ -186,13 +186,13 @@ The JSON report includes scanned files, summary counts, issue severity, source f
 
 ## Codex handoff
 
-Use `--codex` to generate a compact Markdown summary for a coding agent:
+Use `--codex` to generate a compact Markdown fix queue for a coding agent:
 
 ```bash
 agent-lint --codex
 ```
 
-The summary is designed to help an agent fix instruction drift without loading the full report.
+The summary groups actionable issues by file, breaks long file entries into short lines, compresses repeated info notes, and avoids boilerplate so an agent can fix instruction drift without loading the full report.
 
 ## Artifact writing
 

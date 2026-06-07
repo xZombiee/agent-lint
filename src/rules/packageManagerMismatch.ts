@@ -29,6 +29,20 @@ function getPreferredPackageManager(context: ScanContext): { packageManager: Pac
   };
 }
 
+function isGlobalToolInstall(rawCommand: string, instructionText: string): boolean {
+  if (!/\b(?:npm|pnpm|yarn|bun)\s+(?:add|install|i)\b/iu.test(rawCommand)) {
+    return false;
+  }
+
+  const commandStart = instructionText.toLowerCase().indexOf(rawCommand.toLowerCase());
+  const commandText =
+    commandStart === -1
+      ? instructionText
+      : instructionText.slice(commandStart, commandStart + 120);
+
+  return /\s(?:-g|--global)\b/iu.test(commandText);
+}
+
 export function packageManagerMismatch(context: ScanContext): AgentLintIssue[] {
   const preferred = getPreferredPackageManager(context);
 
@@ -42,6 +56,10 @@ export function packageManagerMismatch(context: ScanContext): AgentLintIssue[] {
   for (const instructionFile of context.instructionFiles) {
     for (const mention of instructionFile.packageManagerMentions) {
       if (mention.packageManager === preferred.packageManager) {
+        continue;
+      }
+
+      if (isGlobalToolInstall(mention.rawCommand, mention.instructionText)) {
         continue;
       }
 
