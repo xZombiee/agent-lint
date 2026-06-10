@@ -1,5 +1,4 @@
 node_modules
 .agent-lint/
-.agent-doctor/
 .DS_Store
 *.tgz

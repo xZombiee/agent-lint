@@ -93,16 +93,16 @@ test("nested AGENTS files are discovered and can resolve local relative paths", 
   assert.equal(result.report.summary.issueCount, 0);
 });
 
-test("OpenClaw-style prose slash phrases do not become broken local path errors", async () => {
-  const projectRoot = await copyFixture("openclaw-like");
+test("external docs prose slash phrases do not become broken local path errors", async () => {
+  const projectRoot = await copyFixture("external-docs-like");
   const result = await runAgentLint({ projectRoot });
 
   assert.equal(result.report.summary.errorCount, 0);
   assert.equal(result.report.summary.warningCount, 0);
-  assert.equal(result.report.summary.infoCount, 3);
+  assert.equal(result.report.summary.infoCount, 2);
 
   const messages = result.report.issues.map((issue) => issue.evidence.instructionText);
-  assert(messages.some((message) => message.includes("openclaw/docs")));
+  assert(messages.some((message) => message.includes("sample-org/docs")));
   assert(messages.some((message) => message.includes("extensions/telegram/src/index.ts:80")));
   assert(messages.every((message) => !message.includes("Docs/user-visible")));
   assert(messages.every((message) => !message.includes("Fix/triage")));
@@ -116,13 +116,13 @@ test("OpenClaw-style prose slash phrases do not become broken local path errors"
   assert(messages.every((message) => !message.includes("docs/<locale>/**")));
   assert(messages.every((message) => !message.includes("[Config](/gateway/configuration)")));
   assert(messages.every((message) => !message.includes("agents.defaults.skills")));
-  assert(messages.every((message) => !message.includes("openclaw/plugin-sdk/*")));
+  assert(messages.every((message) => !message.includes("sample-org/plugin-sdk/*")));
   assert(messages.every((message) => !message.includes("**Discord/WhatsApp:**")));
   assert(messages.every((message) => !message.includes("pnpm format:*")));
   assert(messages.every((message) => !message.includes("pnpm test*")));
   assert(messages.every((message) => !message.includes("core/plugin")));
   assert(messages.every((message) => !message.includes("release/")));
-  assert(messages.every((message) => !message.includes("../openclaw-docs")));
+  assert(messages.every((message) => !message.includes("../sample-docs")));
 });
 
 test("unreadable directories do not crash the scan", async () => {
@@ -130,7 +130,7 @@ test("unreadable directories do not crash the scan", async () => {
   const blockedDirectory = path.join(projectRoot, "blocked");
 
   await mkdir(blockedDirectory, { recursive: true });
-  await writeFile(path.join(blockedDirectory, "secret.txt"), "secret\n", "utf8");
+  await writeFile(path.join(blockedDirectory, "blocked.txt"), "blocked\n", "utf8");
   await chmod(blockedDirectory, 0o000);
 
   try {

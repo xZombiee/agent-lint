@@ -399,15 +399,11 @@ function isExternalReferenceCandidate(candidatePath, line) {
     const segments = splitPathSegments(candidatePath);
     const firstSegment = segments[0]?.toLowerCase() ?? "";
     const isExplicitLiteral = line.includes(`\`${candidatePath}\``);
-    if (firstSegment === "openclaw" &&
-        /\b(import|imports|importing|from)\b/iu.test(line)) {
-        return false;
-    }
     return (segments.length === 2 &&
         !STRONG_CODE_ROOT_SEGMENTS.has(firstSegment) &&
         segments.every((segment) => /^[a-z0-9][a-z0-9-]*$/u.test(segment)) &&
-        (firstSegment === "openclaw" ||
-            (isExplicitLiteral && EXTERNAL_REFERENCE_CONTEXT.test(line))));
+        isExplicitLiteral &&
+        EXTERNAL_REFERENCE_CONTEXT.test(line));
 }
 function hasHardRequirementCue(line) {
     return /\b(must exist|required|requires|live in|lives in|stored in|stored under|add|create|update|edit|open|read|write)\b/iu.test(line);

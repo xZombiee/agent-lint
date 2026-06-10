@@ -1,5 +1,5 @@
 {
-  "name": "openclaw-like",
+  "name": "external-docs-like",
   "private": true,
   "scripts": {
     "docs:list": "node ./scripts/docs-list.js"

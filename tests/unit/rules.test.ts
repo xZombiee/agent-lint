@@ -248,7 +248,7 @@ test("brokenFileReferences escalates missing action directories to errors", () =
 });
 
 test("brokenFileReferences treats external repo references as informational only", () => {
-  const issues = brokenFileReferences(createContext("Publish repo: `openclaw/docs`."));
+  const issues = brokenFileReferences(createContext("Publish repo: `sample-org/docs`."));
 
   assert.equal(issues.length, 1);
   assert.equal(issues[0]?.severity, "info");

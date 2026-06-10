@@ -236,11 +236,8 @@ function shouldEmitInfoIssue(reference: FileReference): boolean {
     return true;
   }
 
-  return (
-    reference.path.startsWith("openclaw/") ||
-    /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|separate repo|cloned locally as)\b/iu.test(
-      reference.instructionText,
-    )
+  return /\b(another repo|external repo|owner repos?|publish repo|mirror build|see its|see their|route to|routes to|separate repo|cloned locally as)\b/iu.test(
+    reference.instructionText,
   );
 }
 

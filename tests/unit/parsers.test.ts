@@ -46,17 +46,17 @@ Source docs stay under \`docs/**\` and plugin code under \`extensions/*/src/**\`
 test("extractFilePaths classifies reference-format examples as examples", () => {
   const references = extractFilePaths(`
 Replies: repo-root refs only: \`extensions/telegram/src/index.ts:80\`. No absolute paths, no \`~/\`.
-openclaw agents set-identity --agent main --avatar avatars/openclaw.png
-avatar: "avatars/openclaw.png",
-Example command: openclaw agents set-identity --avatar avatars/sample.png
+samplectl agents set-identity --agent main --avatar avatars/main-agent.png
+avatar: "avatars/main-agent.png",
+Example command: samplectl agents set-identity --avatar avatars/sample.png
 `);
 
   assert.deepStrictEqual(
     references.map((reference) => [reference.path, reference.kind]),
     [
       ["extensions/telegram/src/index.ts", "example"],
-      ["avatars/openclaw.png", "hard"],
-      ["avatars/openclaw.png", "hard"],
+      ["avatars/main-agent.png", "hard"],
+      ["avatars/main-agent.png", "hard"],
       ["avatars/sample.png", "example"],
     ],
   );
@@ -81,7 +81,7 @@ test("extractFilePaths cleans wrapper leftovers without dropping real paths", ()
   const references = extractFilePaths(`
 No deep internals (\`extensions/*/src/**\`, \`onboard.js\`).
 Run \`node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts\`.
-Do not treat \`...\`, \`openclaw/plugin-sdk/*\`, or **Discord/WhatsApp:** as paths.
+Do not treat \`...\`, \`sample-org/plugin-sdk/*\`, or **Discord/WhatsApp:** as paths.
 - **\`src/extension/\`**: Main extension implementation.
 `);
 
@@ -167,22 +167,22 @@ test("extractFilePaths drops prose slash phrases and keeps external repo referen
 Docs/user-visible work: \`pnpm docs:list\`, then read relevant docs only.
 Fix/triage answers need source, tests, current/shipped behavior, and dependency contract proof.
 Prefer findings for docs/config mismatches and compat/deprecation noise.
-Publish repo: \`openclaw/docs\`.
+Publish repo: \`sample-org/docs\`.
 Plugin SDK exception: shipped external API gets new API first plus named compat/deprecation, small tests/docs if useful, removal plan.
 Before sharing WebVNC links, verify real app/path works.
 Handle real production states. Public/hostile/observed malformed input gets care.
 Full suites: Docker/package/E2E/live/cross-OS proof.
-Extension production code should import from \`openclaw/plugin-sdk/*\`.
+Extension production code should import from \`sample-org/plugin-sdk/*\`.
 Freshness exceptions need named owner + tests.
 Prefer a small versioned host/kernel seam.
 Optional integrations route to owner repos; keep core/plugin APIs local.
 Backport means apply to newest open \`release/\` branch.
-The publish output is often cloned locally as \`../openclaw-docs\`.
+The publish output is often cloned locally as \`../sample-docs\`.
 `);
 
   assert.deepStrictEqual(
     references.map((reference) => [reference.path, reference.kind]),
-    [["openclaw/docs", "external"]],
+    [["sample-org/docs", "external"]],
   );
 });
 
