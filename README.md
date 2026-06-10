@@ -6,10 +6,10 @@ Find stale AGENTS.md guidance before your agent follows it.
 
 ## Install
 
-Until `agent-lint` is published to npm, install it from GitHub:
+Install from npm:
 
 ```bash
-npm install -g https://github.com/xZombiee/agent-lint/archive/refs/heads/main.tar.gz
+npm install -g @xzombiee/agent-lint
 ```
 
 Run it:
@@ -21,14 +21,14 @@ agent-lint
 Project-local install:
 
 ```bash
-npm install -D https://github.com/xZombiee/agent-lint/archive/refs/heads/main.tar.gz
+npm install -D @xzombiee/agent-lint
 npm exec agent-lint
 ```
 
-After the package is published, the install command will become:
+GitHub tarball fallback:
 
 ```bash
-npm install -g agent-lint
+npm install -g https://github.com/xZombiee/agent-lint/archive/refs/heads/main.tar.gz
 ```
 
 ## Quick start

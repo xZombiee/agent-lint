@@ -1,5 +1,5 @@
 {
-  "name": "agent-lint",
+  "name": "@xzombiee/agent-lint",
   "version": "0.1.0",
   "description": "CLI that lints stale, broken, and contradictory AI coding instructions in your repository.",
   "license": "MIT",
